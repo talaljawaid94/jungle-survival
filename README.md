@@ -58,3 +58,7 @@ Debug: `window.game` exposes the systems; `game.advance(seconds)` steps the simu
 - Serve with gzip or brotli: the models total about 14 MB (survivor.glb is 8.4 MB) and the JS bundle is about 240 KB gzipped.
 - Debug handle `window.game` only exists in dev or with `?debug` in the URL.
 - Saves live in the player's browser (`localStorage`, key `jungle-survival-save-v1`).
+
+## Branches
+- `initial`: test branch. Every push gets a Vercel preview URL.
+- `main`: production. Updated only by merging `initial` through a pull request.
