@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jungle Survival</title>
+  <meta name="description" content="A helicopter crashes on a jungle island. Find water, build fire, hunt and survive the nights." />
+  <meta name="theme-color" content="#060d07" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="ui"></div>
+  <div id="loading"><div class="ld-in"><img src="/src/assets/logo.png" alt="Jungle Survival" width="300" height="300" draggable="false"><div class="ld-bar"><i id="ldFill"></i></div><div id="ldText">Preparing…</div></div></div>
+  <noscript><p style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#060d07;color:#a9b8a6;font:16px system-ui">Jungle Survival needs JavaScript and WebGL.</p></noscript>
+  <style>
+    #loading { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #10200f 0%, #060d07 75%); transition: opacity .7s ease; }
+    #loading.out { opacity: 0; pointer-events: none; }
+    #loading .ld-in { display: flex; flex-direction: column; align-items: center; gap: 18px; width: min(340px, 80vw); text-align: center; }
+    #loading img { width: min(300px, 60vw); height: auto; filter: drop-shadow(0 10px 30px rgba(0,0,0,.7)); }
+    #loading .ld-bar { width: 100%; height: 4px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+    #loading .ld-bar i { display: block; height: 100%; width: 4%; background: #a4c76a; border-radius: 2px; transition: width .35s ease; }
+    #ldText { color: #a9b8a6; font: 600 11px/1 system-ui, sans-serif; letter-spacing: .24em; text-transform: uppercase; }
+  </style>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
