@@ -66,7 +66,7 @@ const TEMPLATE = `
     <button id="btnNew" class="mbtn primary">${icon('campfire', 22)} New game</button>
     <button id="btnSettings" class="mbtn">${icon('gear', 22)} Settings</button>
   </div>
-  <div class="ver">PROTOTYPE · THREE.JS</div>
+  <div class="ver">FIRST PREVIEW · v0.3</div>
 </div>
 <div id="pause" class="screen hidden"><h1>PAUSED</h1>
   <button id="btnResume" class="mbtn primary">${icon('arrow_up', 22)} Resume</button>
