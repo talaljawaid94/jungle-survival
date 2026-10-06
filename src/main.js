@@ -30,7 +30,7 @@ const canvas = document.getElementById('c');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); }
 catch (e) { const t = document.getElementById('ldText'); if (t) t.textContent = 'WebGL is not available in this browser'; throw e; }
-canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); location.reload(); });
+canvas.addEventListener('webglcontextlost', (e) => e.preventDefault());      // lets the browser restore the context; three.js rebuilds its GPU state
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
