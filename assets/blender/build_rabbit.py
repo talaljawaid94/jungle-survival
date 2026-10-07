@@ -20,16 +20,16 @@ def rabbit_metaball(res=0.0055):
     def mirror(c, dims, tilt=(0, 0, 0), stiff=2.0):
         for s in (-1, 1): el((s * c[0], c[1], c[2]), dims, (tilt[0], tilt[1] * s, tilt[2] * s), stiff)
     # torso: low shoulders, deep chest, a high round rump on a short hunched back (the classic rabbit wedge)
-    el((0, -0.060, 0.165), (0.14, 0.17, 0.17)); el((0, 0.040, 0.190), (0.15, 0.17, 0.17)); el((0, 0.130, 0.215), (0.16, 0.19, 0.23)); el((0, 0.030, 0.120), (0.11, 0.21, 0.09))
+    el((0, -0.060, 0.155), (0.14, 0.17, 0.19)); el((0, 0.040, 0.190), (0.15, 0.17, 0.17)); el((0, 0.130, 0.215), (0.16, 0.19, 0.23)); el((0, 0.030, 0.120), (0.11, 0.21, 0.09))
     mirror((0.072, 0.120, 0.150), (0.095, 0.20, 0.21), (0.12, 0, 0.0))                       # big thigh mass
     # neck and head: round skull, short blunt muzzle, full cheeks
     el((0, -0.150, 0.225), (0.10, 0.10, 0.12), (-0.3, 0, 0)); el((0, -0.225, 0.245), (0.100, 0.115, 0.100)); el((0, -0.283, 0.222), (0.064, 0.062, 0.060), (0.2, 0, 0))
     mirror((0.040, -0.255, 0.224), (0.060, 0.080, 0.070)); el((0, -0.316, 0.214), (0.032, 0.026, 0.030))
     # front legs: slim and upright, long paws
-    mirror((0.036, -0.112, 0.095), (0.030, 0.052, 0.14), (0.1, 0, 0)); mirror((0.038, -0.132, 0.050), (0.023, 0.036, 0.10)); mirror((0.039, -0.158, 0.0125), (0.030, 0.072, 0.025))
+    mirror((0.038, -0.092, 0.105), (0.034, 0.075, 0.10), (-0.55, 0, 0)); mirror((0.039, -0.128, 0.058), (0.024, 0.040, 0.085), (0.45, 0, 0)); mirror((0.040, -0.158, 0.0125), (0.030, 0.070, 0.025))
     # hind legs: folded shin, hock, and the long flat foot
     mirror((0.076, 0.115, 0.080), (0.050, 0.10, 0.12), (-0.3, 0, 0)); mirror((0.077, 0.205, 0.048), (0.046, 0.06, 0.07)); mirror((0.077, 0.112, 0.0145), (0.040, 0.17, 0.029))
-    el((0, 0.262, 0.226), (0.085, 0.085, 0.095))                                              # cotton tail
+    el((0, 0.250, 0.222), (0.070, 0.070, 0.080))                                              # cotton tail
     return ob
 
 def paint_rabbit(body):
@@ -104,12 +104,20 @@ def rabbit_extras(mats, body):
             w = tapered_tube('Whisker', [base, mid, tip], [0.00055, 0.00040, 0.00008], segs=4, subdiv_each=3, color_fn=lambda t: (0.92, 0.9, 0.85))
             w.data.materials.append(mats['eyevc']); out.append(w)
         # claws
-        for front, (cx, cy, nclaw) in ((True, (0.039, -0.190, 3)), (False, (0.077, 0.020, 3))):
+        for front, (cx, cy, nclaw) in ((True, (0.040, -0.188, 4)), (False, (0.077, 0.034, 4))):
             for j in range(nclaw):
-                off = (j - (nclaw - 1) / 2) * 0.0075
-                bpy.ops.mesh.primitive_cone_add(radius1=0.0020, radius2=0.0004, depth=0.008, vertices=8, location=(s * cx + off, cy - 0.003, 0.0085))
-                cl = bpy.context.active_object; cl.rotation_euler = (math.radians(-90 + 20), 0, 0); bpy.ops.object.transform_apply(rotation=True); _smooth(cl)
+                off = (j - (nclaw - 1) / 2) * 0.0072
+                bpy.ops.mesh.primitive_cone_add(radius1=0.0025, radius2=0.0004, depth=0.013, vertices=8, location=(s * cx + off * 0.9, cy - 0.0085, 0.0095))
+                cl = bpy.context.active_object; cl.rotation_euler = (math.radians(104), 0, s * (j - (nclaw - 1) / 2) * 0.10); bpy.ops.object.transform_apply(rotation=True); _smooth(cl)
                 cl.name = 'Claw_%s_%s' % ('f' if front else 'h', 'l' if s > 0 else 'r'); cl.data.materials.append(mats['claw']); out.append(cl)
+    # cotton tail: a separate fluffy puff, white with a brown top
+    tl = sph('RabbitTail', 0.040, (0, 0.292, 0.216), (1.0, 0.95, 1.0), None)
+    col = tl.data.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
+    for i, v in enumerate(tl.data.vertices):
+        c = Vector((0.96, 0.94, 0.89)).lerp(Vector((0.42, 0.33, 0.24)), smoothstep(0.55, 0.95, v.normal.z) * 0.55)
+        c = c * (1 + mnoise.noise(Vector((v.co.x * 90, v.co.y * 90, v.co.z * 90))) * 0.10)
+        for k in range(3): c[k] = max(0.0, min(1.0, c[k]))
+        col.data[i].color = (c[0] ** 2.2, c[1] ** 2.2, c[2] ** 2.2, 1)
     # nose, nostrils, teeth, mouth line
     sph('RabbitNose', 0.0110, surf((0, -0.322, 0.2175), 0.003)[0], (1.15, 0.8, 0.85), (0.74, 0.46, 0.44))
     for s in (-1, 1):
@@ -121,7 +129,7 @@ def rabbit_extras(mats, body):
     return out
 
 def rabbit_materials():
-    return {'coat': _mat_vcol('RabbitCoat', TEXD + 'deer_fur.png', 0.95), 'eyevc': _mat_vcol('RabbitVC', None, 0.12), 'claw': _flat('Claw', (0.22, 0.17, 0.12), 0.55)}
+    return {'coat': _mat_vcol('RabbitCoat', TEXD + 'deer_fur.png', 0.95), 'eyevc': _mat_vcol('RabbitVC', None, 0.12), 'claw': _flat('Claw', (0.36, 0.29, 0.21), 0.45)}
 
 def build_rabbit_rig(parts):
     arm = bpy.data.armatures.new('RabbitRig'); rig = bpy.data.objects.new('RabbitRig', arm); bpy.context.scene.collection.objects.link(rig)
@@ -134,7 +142,7 @@ def build_rabbit_rig(parts):
     bone('neck', (0, -0.11, 0.20), (0, -0.19, 0.23), 'spine2'); bone('head', (0, -0.19, 0.23), (0, -0.33, 0.215), 'neck'); bone('tail', (0, 0.23, 0.22), (0, 0.31, 0.23), 'pelvis')
     for sfx, s in (('l', 1), ('r', -1)):
         bone('ear_' + sfx, (s * 0.036, -0.203, 0.300), (s * 0.058, -0.24, 0.43), 'head')
-        bone('f_upper_' + sfx, (s * 0.038, -0.112, 0.16), (s * 0.038, -0.132, 0.08), 'spine2'); bone('f_lower_' + sfx, (s * 0.038, -0.132, 0.08), (s * 0.039, -0.155, 0.02), 'f_upper_' + sfx); bone('f_paw_' + sfx, (s * 0.039, -0.155, 0.02), (s * 0.039, -0.195, 0.01), 'f_lower_' + sfx)
+        bone('f_upper_' + sfx, (s * 0.038, -0.075, 0.15), (s * 0.038, -0.108, 0.075), 'spine2'); bone('f_lower_' + sfx, (s * 0.038, -0.108, 0.075), (s * 0.040, -0.145, 0.02), 'f_upper_' + sfx); bone('f_paw_' + sfx, (s * 0.040, -0.145, 0.02), (s * 0.040, -0.192, 0.01), 'f_lower_' + sfx)
         bone('h_thigh_' + sfx, (s * 0.076, 0.14, 0.21), (s * 0.076, 0.17, 0.10), 'pelvis'); bone('h_shin_' + sfx, (s * 0.076, 0.17, 0.10), (s * 0.077, 0.205, 0.048), 'h_thigh_' + sfx)
         bone('h_foot_' + sfx, (s * 0.077, 0.205, 0.048), (s * 0.077, 0.03, 0.012), 'h_shin_' + sfx)
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -146,6 +154,7 @@ def build_rabbit_rig(parts):
     for o in parts[1:]:
         name = 'head'
         if 'Ear' in o.name: name = 'ear_l' if o.location.x > 0 else 'ear_r'
+        elif o.name.startswith('RabbitTail'): name = 'tail'
         elif o.name.startswith('Claw_'):
             _, k, sd = o.name.split('.')[0].split('_'); name = ('f_paw_' if k == 'f' else 'h_foot_') + sd
         vg = o.vertex_groups.new(name=name); vg.add(range(len(o.data.vertices)), 1.0, 'REPLACE'); md = o.modifiers.new('Armature', 'ARMATURE'); md.object = rig; o.parent = rig

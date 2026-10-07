@@ -83,7 +83,7 @@ export class Animals {
       const dx = px - a.x, dz = pz - a.z, d = Math.hypot(dx, dz);
       if (a.dead) {
         a.deadT = Math.min(a.deadT + dt * 2.5, 1); a.corpseT += dt;
-        a.g.rotation.z = a.deadT * 1.45; a.g.position.y = a.y + a.deadT * a.sp.size * 0.15;
+        a.g.rotation.z = a.deadT * 1.45; a.g.position.y = a.y + a.deadT * (a.type === 'rabbit' ? 0.075 : a.sp.size * 0.15);       // the rabbit is small: lift its side-lying body so it rests on the ground instead of sinking in
         if ((a.hitFlash || 0) > 0) a.m.animate(a, dt);              // let the red hit flash fade on the body
         if (a.corpseT > 240) this.remove(a);
         continue;
