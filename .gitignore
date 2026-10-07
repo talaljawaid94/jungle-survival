@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.log
+.vercel
+# large working files: keep locally, not in the repo
+*.mp4
+*.blend
+*.blend1
+assets/blender/previews/
+assets/blender/tex/
+marketing/*.png
