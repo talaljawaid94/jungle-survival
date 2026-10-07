@@ -278,12 +278,6 @@ img.ico { object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.55)); 
 #hints, #hintBtn { left: 18px; right: auto; bottom: 18px; font-family: var(--game); background: linear-gradient(180deg, rgba(16, 52, 62, 0.88), rgba(7, 27, 34, 0.9)); border: 2px solid rgba(242, 193, 78, 0.4); border-radius: 14px; backdrop-filter: none; }
 #hints b { background: linear-gradient(#ffe596, #e4a52c); color: #4a2c05; box-shadow: inset 0 -2px 0 rgba(122, 76, 12, 0.5); }
 
-@media (max-width: 1180px) {
-  #pcard { transform: scale(0.84); transform-origin: top left; } #objective { top: 124px; width: 320px; transform: scale(0.92); transform-origin: top left; }
-  #topright { transform: scale(0.84); transform-origin: top right; } #actions { transform: scale(0.84); transform-origin: bottom right; } #compass { display: none; }
-}
-@media (max-width: 860px) { #hints, #hintBtn { display: none; } #actions { right: 10px; } #hotbar { bottom: 128px; } }
-
 /* ================= Menus, pause, death and panels in the same game skin ================= */
 .screen, .sheet, .backdrop, #tip { font-family: var(--game); }
 #menu { background: radial-gradient(ellipse at 50% 42%, rgba(6, 30, 38, 0.45) 0%, rgba(4, 22, 28, 0.78) 58%, rgba(2, 12, 16, 0.95) 100%); }
@@ -347,3 +341,64 @@ img.ico { object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.55)); 
 .switch { background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.18); } .switch.on { background: linear-gradient(#ffe596, #e4a52c); box-shadow: inset 0 0 0 2px #8a5a0c; }
 .val { font-family: var(--game); color: var(--gold-hi); font-weight: 600; }
 #tip { background: linear-gradient(180deg, rgba(18, 58, 68, 0.97), rgba(7, 28, 35, 0.97)); border: 2px solid rgba(242, 193, 78, 0.6); border-radius: 14px; color: #fff; backdrop-filter: none; } #tip span { color: #b6d0d6; }
+
+
+/* ================= Small screens ================= */
+/* tablets and small laptops */
+@media (max-width: 1180px) {
+  #pcard { transform: scale(0.88); transform-origin: top left; } #objective { top: 128px; width: 330px; }
+  #topright { transform: scale(0.88); transform-origin: top right; } #actions { transform: scale(0.88); transform-origin: bottom right; } #compass { display: none; }
+  #hints, #hintBtn { display: none; }
+}
+/* compact HUD: phones (either orientation) and short windows */
+@media (max-width: 900px), (max-height: 560px) {
+  #pcard { transform: scale(0.7); transform-origin: top left; left: 10px; top: 8px; }
+  #objective { left: 10px; top: 88px; width: min(300px, 52vw); padding: 5px 10px 5px 6px; gap: 7px; transform: none; border-radius: 20px; }
+  #objective .pin { width: 26px; height: 26px; } #objective .pin .ic { width: 16px; height: 16px; } #objText { font-size: 12px; line-height: 1.2; } #objSteps { margin-top: 4px; } #objSteps i { height: 3px; }
+  #objDist { font-size: 12px; } #objArrow { width: 18px; height: 18px; } #objGo { padding-left: 6px; gap: 4px; }
+  #topright { transform: scale(0.62); transform-origin: top right; right: 8px; top: 6px; } #place { display: none; }
+  #actions { transform: scale(0.66); transform-origin: bottom right; right: 8px; bottom: 8px; gap: 12px; }
+  #hotbar { gap: 4px; bottom: 8px; } .slot { width: min(46px, calc((100vw - 28px - 32px) / 9)); height: min(46px, calc((100vw - 28px - 32px) / 9)); border-radius: 11px; } .slot .k { left: 2px; top: 2px; min-width: 14px; height: 14px; font-size: 9px; } .slot .n { font-size: 10px; right: 4px; bottom: 2px; }
+  .slot.sel { transform: translateY(-4px) scale(1.04); } .slot .ic, .slot img.ico { width: 70%; height: 70%; }
+  #itemLabel { bottom: 62px; font-size: 12px; }
+  #compass, #hints, #hintBtn { display: none; }
+  #feed { width: 180px; right: 8px; } .feed { transform-origin: right center; } #toasts { top: 70px; } .toast { font-size: 12.5px; padding: 6px 12px; }
+  #marker .meta { padding: 5px 10px 6px; } #marker .act { font-size: 13px; } #marker .nm { font-size: 9.5px; }
+  #skipHint { right: 10px; bottom: 56px; font-size: 12px; padding: 5px 12px 5px 8px; }
+  #banner { top: 12%; }
+}
+/* portrait phones: actions sit above the hotbar so nothing overlaps */
+@media (max-width: 600px) and (min-height: 561px) {
+  #actions { bottom: 70px; right: 8px; } #itemLabel { bottom: 128px; }
+  #pcard { transform: scale(0.62); } #pstats { min-width: 196px; padding-right: 12px; } #topright { transform: scale(0.5); right: 6px; top: 4px; }
+  #objective { width: calc(100vw - 20px); max-width: none; top: 124px; } #toasts { top: 168px; }
+  #hotbar { bottom: 10px; }
+}
+/* phone landscape: more room sideways, less height */
+@media (max-height: 560px) and (min-width: 601px) {
+  #topright { transform: scale(0.52); } #pcard { transform: scale(0.62); } #objective { top: 78px; width: min(260px, 40vw); }
+  #hotbar { gap: 3px; } .slot { width: 38px; height: 38px; } #actions { transform: scale(0.58); }
+}
+
+/* panels: never wider or taller than the screen, scroll when needed */
+.sheet { max-width: 96vw; max-height: 94vh; overflow: auto; }
+#inv, #craft, #settings, #map { max-width: 96vw; } #settings { width: min(560px, 96vw); } #craft { width: min(600px, 96vw); }
+@media (max-width: 900px), (max-height: 560px) {
+  .sheet header { padding: 8px 12px 8px 14px; gap: 10px; } .sheet header h2 { font-size: 17px; } .hintTxt { display: none; } .xbtn { width: 30px; height: 30px; }
+  #inv { width: 96vw; } #invGrid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); grid-auto-rows: 54px; gap: 6px; padding: 12px; } #invGrid .slot { width: auto; height: 54px; } #invInfo { padding: 4px 14px 10px; }
+  .sheet .body { flex-direction: column; } .detail { border-left: 0; border-top: 2px solid rgba(242, 193, 78, 0.25); padding: 12px 14px; min-width: 0; } .detail .big { width: 64px; height: 64px; margin-bottom: 8px; }
+  #craftList { padding: 12px; gap: 7px; max-height: none; } .recipe { grid-template-columns: 38px 1fr auto; gap: 10px; padding: 8px 10px; } .recipe .nm { font-size: 14px; }
+  .set { padding: 8px 14px 6px; } .row { padding: 8px 0; gap: 10px; flex-wrap: wrap; } .row input[type=range] { width: 130px; } .row .lab small { display: none; }
+  #mapCanvas { width: min(calc(100vh - 150px), 90vw, 740px); height: min(calc(100vh - 150px), 90vw, 740px); margin: 10px auto; } .legend { padding: 0 14px 10px; gap: 10px; flex-wrap: wrap; font-size: 11px; }
+}
+/* menu, pause and death screens */
+.mbtn { width: min(330px, 86vw); }
+.pbox { width: min(420px, 92vw); padding-left: clamp(14px, 5vw, 38px); padding-right: clamp(14px, 5vw, 38px); box-sizing: border-box; } .pbox .mbtn { width: 100%; max-width: 330px; } .pstat { flex-wrap: wrap; justify-content: center; }
+@media (max-height: 560px) {
+  #menu .col { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 26px; max-width: 760px; text-align: left; padding: 0 20px; }
+  #menu .logo { grid-row: 1 / span 6; width: min(52vh, 250px); margin: 0; justify-self: center; } #menu p { margin: 0 0 8px; font-size: 13px; max-width: none; } #menu .mbtn { width: min(300px, 100%); margin-bottom: 6px; padding: 8px 16px 9px; font-size: 15px; border-width: 2.5px; border-radius: 14px; }
+  #menu .ver { bottom: 8px; font-size: 10px; }
+  .pbox { padding: 46px 22px 14px; border-radius: 22px; } .pavatar { width: 72px; height: 72px; top: -36px; } #pause h1, #dead h1 { font-size: 24px; } .psub { margin: 2px 0 8px; font-size: 13px; } .pstat { margin-bottom: 10px; gap: 5px; } .pstat span { padding: 3px 8px 3px 6px; } .pstat b { font-size: 12px; }
+  .pbox .mbtn { width: 100%; max-width: 280px; padding: 7px 14px 8px; margin-bottom: 6px; font-size: 14.5px; } .pfoot { font-size: 11px; } .deadbox { padding-top: 24px; } #dead .skull { width: 54px; height: 54px; margin-bottom: 6px; }
+}
+@media (max-width: 480px) { #menu p { font-size: 14px; } #menu .logo { width: min(38vh, 72vw); } .mbtn { font-size: 16px; padding: 11px 16px 12px; } }
