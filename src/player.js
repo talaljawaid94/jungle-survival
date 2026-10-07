@@ -10,7 +10,7 @@ export class Player {
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3(); this.heading = 0; this.yaw = 0; this.pitch = 0.28;
     this.camDist = 5.4; this.char = createCharacter(); scene.add(this.char.group);
     this.onGround = true; this.swimming = false; this.sprinting = false; this.moving = false; this.speed = 0;
-    this.gathering = false; this.sleeping = false; this.dead = false; this.wakeT = 0; this.surface = 'grass';
+    this.gathering = false; this.act = null; this.sleeping = false; this.dead = false; this.wakeT = 0; this.surface = 'grass';
     this.torchLit = false; this.flareT = 0; this.warn = 0; this.camPos = new THREE.Vector3(); this.swimTick = 0;
     this.torchPhase = 0; this.sens = 1; this.invertY = false; this.baseFov = 62;
     this.flareLight = new THREE.PointLight(0xff3a2a, 0, 70, 1.1); this.flareLight.position.y = 2.4; this.char.group.add(this.flareLight);
@@ -44,6 +44,12 @@ export class Player {
     const k = Math.min(1, dt * (this.moving ? 9 : 10));
     this.vel.x += (dv.x - this.vel.x) * k; this.vel.z += (dv.z - this.vel.z) * k;
     this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
+    // while working on something, step up to a proper arm's length from it (the walk animation plays while closing in)
+    this._approach = 0;
+    if (this.act && this.gathering) {
+      const off = { crate: 0.95, chop: 1.2, butcher: 0.85, pick: 0.8 }[this.act.kind] || 0.8, dx = this.act.x - this.pos.x, dz = this.act.z - this.pos.z, d = Math.hypot(dx, dz);
+      if (d > off + 0.04) { const step = Math.min(d - off, 2.0 * dt); this.pos.x += (dx / d) * step; this.pos.z += (dz / d) * step; this._approach = step / dt; }
+    }
     world.pushOut(this.pos, 0.42);
 
     // island boundary (open sea)
@@ -66,6 +72,7 @@ export class Player {
 
     // ---- facing
     const hv = Math.hypot(this.vel.x, this.vel.z); this.speed = hv;
+    if (this.act && this.gathering) { const th = Math.atan2(this.act.x - this.pos.x, this.act.z - this.pos.z); let d = th - this.heading; d = Math.atan2(Math.sin(d), Math.cos(d)); this.heading += d * Math.min(1, dt * 9); }       // face what you are working on
     if (hv > 0.4 && !this.gathering) { const th = Math.atan2(this.vel.x, this.vel.z); let d = th - this.heading; d = Math.atan2(Math.sin(d), Math.cos(d)); this.heading += d * Math.min(1, dt * 12); }
     this.surface = world.surfaceAt(this.pos.x, this.pos.z);
 
@@ -86,7 +93,7 @@ export class Player {
     const footSlope = Math.atan2(world.heightAt(this.pos.x + fx * 0.7, this.pos.z + fz * 0.7) - world.heightAt(this.pos.x - fx * 0.7, this.pos.z - fz * 0.7), 1.4);
     let yd = this.yaw - this.heading; yd = Math.atan2(Math.sin(yd), Math.cos(yd));
     char.update(dt, {
-      groundAt: (x, z) => world.heightAt(x, z), speed: hv, sprint: this.sprinting, swim: this.swimming, air: !this.onGround && !this.swimming, dead: this.dead,
+      groundAt: (x, z) => world.heightAt(x, z), act: this.act, speed: Math.max(hv, this._approach || 0), sprint: this.sprinting, swim: this.swimming, air: !this.onGround && !this.swimming, dead: this.dead,
       gathering: this.gathering, sleeping: this.sleeping && this.wakeT <= 0 ? true : (this.wakeT > 1.4), tired: stats.energy < 18,
       hurt: stats.health < 30, slope: this.swimming ? 0 : footSlope, yawDiff: yd, pitchLook: (this.pitch - 0.3) * 0.75,
       onStep: () => { audio.step(this.surface); if (this.fx && this.surface === 'water') this.fx.ripple(this.pos.x, this.pos.z, 1.1); },

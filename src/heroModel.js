@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Motion } from './heroMotion.js';
 
 // Survivor model built in Blender (MPFB2 base + custom gear), exported as GLB with a 53-bone game rig.
 // The procedural hero in hero.js still computes every pose (walk, run, swim, gather, attack...); this module
@@ -7,6 +8,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let loaded = null;
 export const hasHeroModel = () => !!loaded;
+
+let motionData = null;
+export async function loadHeroMotion(url) { motionData = await (await fetch(url)).json(); }
 
 export async function loadHeroModel(url) {
   const gltf = await new GLTFLoader().loadAsync(url);
@@ -47,8 +51,10 @@ export function createModelRig(tools) {
     for (const k in tools) hold.add(tools[k]);
   }
 
-  const acc = {};
-  const sync = (J, pelvisY) => {
+  const motion = motionData ? new Motion(motionData) : null;
+  const acc = {}, _p = new THREE.Quaternion(), _m = new THREE.Quaternion(), _d = new THREE.Quaternion();
+  // mot = { mocapW, procW: {bone: weight}, lift } blends the procedural pose (tools, attacks, crouching...) with the motion-capture pose
+  const sync = (J, pelvisY, mot) => {
     for (const k in acc) delete acc[k];
     for (const [jn, bn, w] of MAP) {
       const j = J[jn]; if (!j || !bones[bn]) continue;
@@ -56,13 +62,25 @@ export function createModelRig(tools) {
       if (w !== 1) q.slerp(_id, 1 - w);
       acc[bn] = acc[bn] ? acc[bn].multiply(q) : q;
     }
-    for (const bn in acc) {
-      const r = rest[bn], D = acc[bn]; if (R0[bn]) D.multiply(R0[bn]);
-      bones[bn].quaternion.copy(r.Pi).multiply(D).multiply(r.Pr).multiply(r.q0);
+    for (const bn in acc) if (R0[bn]) acc[bn].multiply(R0[bn]);
+    const mw = mot && motion ? mot.mocapW : 0, names = new Set(Object.keys(acc));
+    if (mw > 0.001) for (const bn of motion.bones) names.add(bn);
+    for (const bn of names) {
+      const r = rest[bn], b = bones[bn]; if (!b) continue;
+      if (acc[bn]) _p.copy(r.Pi).multiply(acc[bn]).multiply(r.Pr).multiply(r.q0); else _p.copy(r.q0);
+      const pose = mw > 0.001 && motion.pose[bn];
+      if (pose) {
+        if (bn === 'neck_01' || bn === 'head') { _m.copy(pose).multiply(_d.copy(r.q0).invert().multiply(_p)); b.quaternion.copy(_p).slerp(_m, mw); }   // mocap plus the procedural look-around
+        else b.quaternion.copy(_p).slerp(pose, mw * (1 - ((mot.procW && mot.procW[bn]) || 0)));
+      } else b.quaternion.copy(_p);
     }
-    const pb = bones.pelvis; if (pb) { _v.set(0, pelvisY - 0.93, 0).applyQuaternion(rest.pelvis.Pi); pb.position.copy(rest.pelvis.p0).add(_v); }
+    const pb = bones.pelvis;
+    if (pb) {
+      _v.set(0, pelvisY - 0.93, 0).applyQuaternion(rest.pelvis.Pi); pb.position.copy(rest.pelvis.p0).add(_v);
+      if (mw > 0.001) { const lift = (mot.lift || 0) - (mot.drop || 0); const mp = rest.pelvis.p0.clone().add(motion.hips).add(new THREE.Vector3(0, lift, 0).applyQuaternion(rest.pelvis.Pi)); pb.position.lerp(mp, mw); }
+    }
   };
-  return { root, bones, sync, hold };
+  return { root, bones, sync, hold, motion };
 }
 
 function fixMaterial(m) {
