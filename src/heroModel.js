@@ -46,11 +46,40 @@ export function createModelRig(tools) {
   // held tools: a group on the right hand whose frame matches the procedural hand (hanging, fingers down)
   const hand = bones.hand_r, hold = new THREE.Group();
   if (hand) {
-    const K = rest.hand_r.Cr.clone().invert().multiply(R0.upperarm_r.clone().invert());       // procedural frame expressed in the hand bone's space
-    hold.quaternion.copy(K); hold.position.set(0, -0.075, 0.012).applyQuaternion(K); hand.add(hold);
+    // the fist: fingers run along the hand's +Y, the handle lies across the palm (hand X axis, index side +X), the palm faces -Z.
+    // tools are modelled with the grip at their origin and the working end along +Y, so +Y is turned to point out of the index/thumb side of the fist.
+    // measured from the rig's knuckles so it follows this hand's real orientation: handle axis A runs pinky -> index knuckle, F is the finger direction,
+    // the palm normal is perpendicular to both and points to the side the fingers curl towards (hand -Z here).
+    const hp = (n) => bones[n] ? hand.worldToLocal(bones[n].getWorldPosition(new THREE.Vector3())) : null, ik = hp('index_01_r'), pk = hp('pinky_01_r'), mk = hp('middle_01_r');
+    if (ik && pk && mk) {
+      const A = ik.clone().sub(pk).normalize(), F = mk.clone().normalize();
+      let N = F.clone().cross(A).normalize(); if (N.z > 0) N.negate();               // palm side
+      const Fo = A.clone().cross(N).normalize(), Bk = N.clone().negate();            // Fo: finger direction made exactly perpendicular, Bk: back of the hand
+      const X = A.clone().cross(Bk).normalize();
+      hold.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, A, Bk));
+      hold.position.copy(ik.clone().add(pk).multiplyScalar(0.5)).addScaledVector(N, 0.024).addScaledVector(Fo, -0.012); hold.userData.palmN = N; hold.userData.knuckle = hold.position.clone();
+    } else { hold.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2); hold.position.set(0.004, 0.094, -0.028); }
+    hand.add(hold);
     for (const k in tools) hold.add(tools[k]);
   }
 
+  // finger bones: closing the hand rotates each joint about its local Z. Curl amounts are 0 (rest) .. 1 (fist).
+  const FING = {}, FY = new THREE.Vector3(0, 1, 0), FZ = new THREE.Vector3(0, 0, 1), FQ = new THREE.Quaternion();
+  for (const side of ['l', 'r']) FING[side] = ['index', 'middle', 'ring', 'pinky'].map((f) => ({ k: f === 'pinky' ? 1.15 : f === 'ring' ? 1.05 : 1.0, j: [1, 2, 3].map((n) => bones[`${f}_0${n}_${side}`]).filter(Boolean).map((b) => ({ b, q0: b.quaternion.clone() })) }));
+  const THUMB = { r: ['thumb_01_r', 'thumb_02_r', 'thumb_03_r'].map((n) => bones[n]).filter(Boolean).map((b) => ({ b, q0: b.quaternion.clone() })), l: ['thumb_01_l', 'thumb_02_l', 'thumb_03_l'].map((n) => bones[n]).filter(Boolean).map((b) => ({ b, q0: b.quaternion.clone() })) };
+  const ANG = [0.9, 1.25, 0.95];
+  const curl = (side, c) => {
+    for (const f of FING[side]) f.j.forEach((x, i) => { x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * f.k * ANG[i])); });
+    THUMB[side].forEach((x, i) => { x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * [0.25, 0.5, 0.5][i])); });
+  };
+  // fit the grip point: close the fist once and put the handle in the middle of the cavity the fingers form
+  if (hand && hold.userData.palmN) {
+    curl('r', 1); root.updateMatrixWorld(true);
+    const c = new THREE.Vector3(); let n = 0;
+    for (const f of ['index', 'middle', 'ring', 'pinky']) for (const j of [2, 3]) { const b = bones[`${f}_0${j}_r`]; if (b) { c.add(hand.worldToLocal(b.getWorldPosition(new THREE.Vector3()))); n++; } }
+    if (n) { c.divideScalar(n); hold.position.copy(c).addScaledVector(hold.userData.palmN, -0.004).add(hold.position.clone().sub(c).multiplyScalar(0.0)); const mid = hold.userData.knuckle; hold.position.lerp(mid, 0.45); }
+    curl('r', 0); root.updateMatrixWorld(true);
+  }
   const motion = motionData ? new Motion(motionData) : null;
   const acc = {}, _p = new THREE.Quaternion(), _m = new THREE.Quaternion(), _d = new THREE.Quaternion();
   // mot = { mocapW, procW: {bone: weight}, lift } blends the procedural pose (tools, attacks, crouching...) with the motion-capture pose
@@ -74,6 +103,7 @@ export function createModelRig(tools) {
         else b.quaternion.copy(_p).slerp(pose, mw * (1 - ((mot.procW && mot.procW[bn]) || 0)));
       } else b.quaternion.copy(_p);
     }
+    if (mot) { curl('r', mot.curlR || 0); curl('l', mot.curlL || 0); if (mot.rollR && bones.hand_r) bones.hand_r.quaternion.multiply(_d.setFromAxisAngle(FY, mot.rollR)); }       // wrist roll turns the fist so the tool points the way it is carried
     const pb = bones.pelvis;
     if (pb) {
       _v.set(0, pelvisY - 0.93, 0).applyQuaternion(rest.pelvis.Pi); pb.position.copy(rest.pelvis.p0).add(_v);

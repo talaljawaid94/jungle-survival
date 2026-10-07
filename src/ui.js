@@ -80,7 +80,7 @@ const TEMPLATE = `
   <div class="legend"><span><i style="background:#ff5b5b"></i>Crash site</span><span><i style="background:#ffb347"></i>Campfire</span><span><i style="background:#fff"></i>You</span><span><i style="background:#4aaac3"></i>Fresh water</span><span style="margin-left:auto">Explore to reveal the island</span></div>
 </div>
 <div id="settings" class="sheet hidden">
-  <header><h2>${icon('gear', 24)} Settings</h2><button class="xbtn" data-close>${icon('close', 18)}</button></header>
+  <header><h2>${icon('cog', 24)} Settings</h2><button class="xbtn" data-close>${icon('close', 18)}</button></header>
   <div class="set" id="setBody"></div>
 </div>
 <div id="menu" class="screen hidden">
@@ -89,21 +89,32 @@ const TEMPLATE = `
     <p>Your helicopter went down over an uncharted island. Find water, build fire, hunt, shelter from the night, and stay alive until help finds you.</p>
     <button id="btnContinue" class="mbtn hidden">${icon('compass', 22)} Continue</button>
     <button id="btnNew" class="mbtn primary">${icon('campfire', 22)} New game</button>
-    <button id="btnSettings" class="mbtn">${icon('gear', 22)} Settings</button>
+    <button id="btnSettings" class="mbtn">${icon('cog', 22)} Settings</button>
   </div>
   <div class="ver">FIRST PREVIEW · v0.3</div>
 </div>
-<div id="pause" class="screen hidden"><h1>PAUSED</h1>
-  <button id="btnResume" class="mbtn primary">${icon('arrow_up', 22)} Resume</button>
-  <button id="btnPSettings" class="mbtn">${icon('gear', 22)} Settings</button>
-  <button id="btnSave" class="mbtn">${icon('check', 22)} Save game</button>
-  <button id="btnQuit" class="mbtn">${icon('close', 22)} Quit to menu</button>
+<div id="pause" class="screen hidden">
+  <div class="pbox gpanel2">
+    <div class="pavatar"><img src="/ui/avatar.png" alt="" draggable="false"></div>
+    <h1>PAUSED</h1>
+    <div class="psub" id="pauseSub">Day 1</div>
+    <div class="pstat" id="pauseStats"></div>
+    <button id="btnResume" class="mbtn primary">${icon('arrow_up', 22)} Resume</button>
+    <button id="btnPSettings" class="mbtn">${icon('cog', 22)} Settings</button>
+    <button id="btnSave" class="mbtn">${icon('check', 22)} Save game</button>
+    <button id="btnQuit" class="mbtn">${icon('close', 22)} Quit to menu</button>
+    <div class="pfoot"><kbd>Esc</kbd> Resume &nbsp; <kbd>P</kbd> Photo &nbsp; <kbd>K</kbd> Sound</div>
+  </div>
 </div>
-<div id="dead" class="screen hidden"><div class="skull">${icon('skull', 54)}</div><h1>YOU DID NOT SURVIVE</h1><p id="deadCause"></p>
-  <div class="deadStats"><div><b id="deadDay">1</b><span>Days survived</span></div></div>
-  <button id="btnRetry" class="mbtn primary">${icon('campfire', 22)} Try again</button>
-  <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
+<div id="dead" class="screen hidden">
+  <div class="pbox gpanel2 deadbox">
+    <div class="skull">${icon('skull', 46)}</div><h1>YOU DID NOT SURVIVE</h1><p id="deadCause"></p>
+    <div class="deadStats"><div><b id="deadDay">1</b><span>Days survived</span></div></div>
+    <button id="btnRetry" class="mbtn primary">${icon('campfire', 22)} Try again</button>
+    <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
+  </div>
 </div>
+<div id="skipHint"><kbd>Space</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
 
@@ -158,7 +169,15 @@ export class UI {
   showMenu(hasSave) { this.$('menu').classList.remove('hidden'); this.$('btnContinue').classList.toggle('hidden', !hasSave); this.hud.classList.add('hidden'); }
   hideMenu() { this.$('menu').classList.add('hidden'); }
   showHud(on) { this.hud.classList.toggle('hidden', !on); }
-  showPause(on) { this.$('pause').classList.toggle('hidden', !on); }
+  showPause(on) {
+    this.$('pause').classList.toggle('hidden', !on);
+    if (on && this.lastStats) {
+      const s = this.lastStats, row = (ic, c, v) => `<span style="--c:${c}">${icon(ic, 18)}<b>${Math.round(Math.max(0, v))}%</b></span>`;
+      this.$('pauseSub').textContent = `Day ${G.day}`;
+      this.$('pauseStats').innerHTML = row('heart', '#ff6f61', s.health) + row('food', '#f6a844', s.hunger) + row('drop', '#5cc4f4', s.thirst) + row('bolt', '#f4d84e', s.energy);
+    }
+  }
+  showSkip(on) { this.$('skipHint').classList.toggle('on', !!on); }
   showDead(day, cause) { this.$('dead').classList.remove('hidden'); this.$('deadDay').textContent = day; this.$('deadCause').textContent = cause; }
   hideDead() { this.$('dead').classList.add('hidden'); }
   openPanel(name) {
@@ -320,7 +339,7 @@ export class UI {
 
   // ---------------------------------------------------------------- per frame
   update(dt, c) {
-    const { stats, inv, player } = c; this.lastInv = inv;
+    const { stats, inv, player } = c; this.lastInv = inv; this.lastStats = stats;
     for (const k of ['health', 'hunger', 'thirst', 'energy']) {
       const v = Math.max(0, stats[k]), b = this.vitals[k];
       b.fill.style.width = v + '%'; if (v < b.last - 0.05) b.trail.style.width = b.last + '%'; else b.trail.style.width = v + '%';

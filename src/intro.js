@@ -45,8 +45,9 @@ export class Intro {
     this.heli.group.rotation.order = 'YXZ'; this.heli.blur.visible = true; this.heli.tailBlur.visible = true;
     this.audio.heliStart(); this.ui.fade(0, 0); this.ui.title('', 0);
     this.prepareWreck();                                   // under the opening fade-in
+    this.ui.showSkip(true);
   }
-  skip() { if (this.running && this.t < T_END - 2.4) { this.t = T_END - 2.4; this.finishCrash(); } }
+  skip() { if (this.running && this.t < T_END - 2.4) { this.t = T_END - 2.4; this.finishCrash(); this.ui.showSkip(false); } }
 
   removeWreckScene() { if (this.wreckScene) { this.wreckScene.dispose(); this.wreckScene = null; } this.wreckReady = false; if (this.wreckLight) this.wreckLight.intensity = 0; }
   finishCrash() {
@@ -176,6 +177,6 @@ export class Intro {
     }
     for (const e of [this.smoke, this.fire, this.sparks, this.leaves, this.blast, this.blastSmoke, this.fireball, this.core, this.debris, this.embers, this.dust, this.wreckSmoke, this.wreckFire]) if (e) e.update(dt);
     if (this.wreckScene) this.wreckScene.update(this.t + performance.now() / 1000); if (this.wreckLight && this.crashed) this.wreckLight.intensity = 3.5 + Math.random() * 1.5;
-    if (t >= T_END) { this.running = false; this.done = true; this.ui.title('', 0); this.ui.subtitle(''); }
+    if (t >= T_END) { this.ui.showSkip(false); this.running = false; this.done = true; this.ui.title('', 0); this.ui.subtitle(''); }
   }
 }
