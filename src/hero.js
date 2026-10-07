@@ -540,6 +540,21 @@ export function createCharacter() {
     if (model) { body.add(model.root); pelvis.visible = false; }
   }
   const update2 = update;
-  function updateAll(dt, s) { update2(dt, s); if (model) model.sync(J, pelvis.position.y); }
+  // keep the planted foot on the terrain: on slopes and with the long running stride the leading foot can dip below the ground,
+  // so the body is lifted by however far the lowest foot sits under the surface at its own position
+  const _fp = new THREE.Vector3(); st.lift = 0;
+  function updateAll(dt, s) {
+    update2(dt, s);
+    if (!model) return;
+    model.sync(J, pelvis.position.y + st.lift);
+    const feet = [model.bones.ball_l, model.bones.ball_r];
+    if (s.groundAt && !s.air && !s.swim && !s.dead && !s.sleeping && feet[0] && feet[1]) {
+      model.root.updateMatrixWorld(true);
+      let clear = 9; for (const b of feet) { b.getWorldPosition(_fp); clear = Math.min(clear, _fp.y - s.groundAt(_fp.x, _fp.z)); }
+      const was = st.lift;
+      st.lift = clamp(st.lift - (clear - 0.02) * (clear < 0.02 ? 1 : 1 - Math.exp(-dt * 6)), 0, 0.45);      // rise at once when a foot is under the ground, settle back gently
+      if (st.lift > was + 0.004) model.sync(J, pelvis.position.y + st.lift);                              // second pass so the lift lands on the same frame
+    } else st.lift *= Math.exp(-dt * 8);
+  }
   return { group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J };
 }

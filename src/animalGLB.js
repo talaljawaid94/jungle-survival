@@ -84,7 +84,7 @@ function addFurShells(model, type) {
 }
 
 export function buildAnimalGLB(type, sp) {
-  const src = loaded[type]; const model = cloneSkinned(src); const g = new THREE.Group(); const holder = new THREE.Group(); holder.rotation.y = Math.PI; holder.add(model); g.add(holder);   // model faces +Z, the game's animals face -Z
+  const src = loaded[type]; const model = cloneSkinned(src); const g = new THREE.Group(); const holder = new THREE.Group(); holder.add(model); g.add(holder);   // the exported models face +Z, which is the game's forward (animals move along sin(heading), cos(heading))
   const mats = [];
   model.traverse((o) => {
     if (o.isMesh) {

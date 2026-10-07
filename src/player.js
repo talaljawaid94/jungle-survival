@@ -86,7 +86,7 @@ export class Player {
     const footSlope = Math.atan2(world.heightAt(this.pos.x + fx * 0.7, this.pos.z + fz * 0.7) - world.heightAt(this.pos.x - fx * 0.7, this.pos.z - fz * 0.7), 1.4);
     let yd = this.yaw - this.heading; yd = Math.atan2(Math.sin(yd), Math.cos(yd));
     char.update(dt, {
-      speed: hv, sprint: this.sprinting, swim: this.swimming, air: !this.onGround && !this.swimming, dead: this.dead,
+      groundAt: (x, z) => world.heightAt(x, z), speed: hv, sprint: this.sprinting, swim: this.swimming, air: !this.onGround && !this.swimming, dead: this.dead,
       gathering: this.gathering, sleeping: this.sleeping && this.wakeT <= 0 ? true : (this.wakeT > 1.4), tired: stats.energy < 18,
       hurt: stats.health < 30, slope: this.swimming ? 0 : footSlope, yawDiff: yd, pitchLook: (this.pitch - 0.3) * 0.75,
       onStep: () => { audio.step(this.surface); if (this.fx && this.surface === 'water') this.fx.ripple(this.pos.x, this.pos.z, 1.1); },
