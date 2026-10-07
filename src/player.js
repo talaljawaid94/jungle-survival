@@ -76,7 +76,7 @@ export class Player {
     for (const n of ['torch', 'flare']) {
       const tl = tools[n]; if (!tl || !tl.userData.light) continue;
       const on = n === 'torch' ? this.equippedId === 'torch' : false;
-      tl.userData.light.intensity = on ? (n === 'torch' ? 5 : 12) * (0.85 + Math.random() * 0.3) : 0;
+      tl.userData.light.intensity = on ? (n === 'torch' ? 8 : 12) * (0.85 + Math.random() * 0.3) : 0;
       if (tl.userData.flame) { tl.userData.flame.visible = on || n === 'torch' ? on : false; if (on) tl.userData.flame.scale.setScalar(0.9 + Math.random() * 0.3); }
     }
     this.flareLight.intensity = this.flareT > 0 ? 14 * (0.85 + Math.random() * 0.3) : 0;

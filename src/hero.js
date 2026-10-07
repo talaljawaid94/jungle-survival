@@ -313,7 +313,7 @@ function buildTools() {
   tool('torch', (g) => {
     g.add(mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.52, 10), wood, 0, 0.1, 0)); g.add(mesh(new THREE.CylinderGeometry(0.036, 0.026, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x1b1008, roughness: 1 }), 0, 0.4, 0));
     const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 10), new THREE.MeshBasicMaterial({ color: 0xff9a2a })); fl.position.y = 0.52; g.add(fl); g.userData.flame = fl;
-    const l = new THREE.PointLight(0xff9a40, 0, 16, 1.6); l.position.y = 0.55; g.add(l); g.userData.light = l;
+    const l = new THREE.PointLight(0xff9a40, 0, 30, 1.25); l.position.y = 0.55; g.add(l); g.userData.light = l;
   });
   tool('flare', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0xc01818, roughness: 0.5 }), 0, 0.05, 0)); const fl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff3a3a })); fl.position.y = 0.24; g.add(fl); g.userData.flame = fl; const l = new THREE.PointLight(0xff3030, 0, 55, 1.2); l.position.y = 0.3; g.add(l); g.userData.light = l; });
   tool('bottle', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.036, 0.038, 0.2, 14), new THREE.MeshPhysicalMaterial({ color: 0x4aa8d8, roughness: 0.1, transmission: 0.5, transparent: true, opacity: 0.8 }), 0, 0.05, 0)); g.add(mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.03, 10), M.metal, 0, 0.165, 0)); });

@@ -284,8 +284,8 @@ function renderFrame(dt, t) {
   renderer.shadowMap.autoUpdate = false; sky.sun.shadow.needsUpdate = (frameNo++ & 1) === 0;      // sun shadows refresh every other frame: half the shadow cost, static shadows are unaffected
   if (!post) { renderer.render(scene, camera); return; }
   const d = sky.daylight, gold = sky.golden, n = sky.night;
-  const tint = [1 + 0.07 * gold - 0.1 * n, 1 - 0.04 * gold - 0.05 * n, 1 - 0.1 * gold + 0.12 * n];
-  const lift = [0.03 * n, 0.045 * n, 0.07 * n];
+  const tint = [1 + 0.07 * gold - 0.15 * n, 1 - 0.04 * gold - 0.07 * n, 1 - 0.1 * gold + 0.12 * n];
+  const lift = [0.012 * n, 0.026 * n, 0.05 * n];
   const hp = stats.health, under = camera.position.y < 0.05 && world.heightAt(camera.position.x, camera.position.z) < -0.2 ? 1 : 0;
   const low = G.state === 'play' && hp < 30 ? (30 - hp) / 30 : 0;
   post.frame(dt, t, { tint, lift, sat: 1.1 - 0.12 * n, bloom: 0.34 + 0.35 * n + 0.15 * gold, desat: low * 0.8, hurt: Math.max(stats.hurtFlash, 0) * 0.6, under, pulse: low * (0.5 + 0.5 * Math.sin(t * (4 + low * 3))) });

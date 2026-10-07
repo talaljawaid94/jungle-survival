@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mulberry32, smoothstep, clamp } from './noise.js';
 
 const C = (r, g, b) => new THREE.Color(r, g, b);
-const NIGHT_TOP = C(0.03, 0.05, 0.13), NIGHT_HOR = C(0.09, 0.13, 0.24);
+const NIGHT_TOP = C(0.018, 0.032, 0.085), NIGHT_HOR = C(0.055, 0.085, 0.165);
 const DAY_TOP = C(0.16, 0.42, 0.85), DAY_HOR = C(0.66, 0.82, 0.92);
 const GOLD_HOR = C(1.0, 0.52, 0.22), GOLD_TOP = C(0.28, 0.32, 0.6);
 
@@ -112,13 +112,13 @@ export class Sky {
     this.sun.intensity = 3.2 * smoothstep(-0.02, 0.35, e);
     this.moon.position.set(center.x - this.sunDir.x * 160, center.y + 120, center.z - this.sunDir.z * 160);
     this.moon.target.position.copy(center);
-    this.moon.intensity = 1.7 * (1 - day);
-    this.hemi.intensity = 0.55 + 0.1 * day;
+    this.moon.intensity = 0.85 * (1 - day);
+    this.hemi.intensity = 0.21 + 0.15 * day;
     this.hemi.color.copy(top).lerp(new THREE.Color(1, 1, 1), 0.35);
-    this.hemi.groundColor.set(0.1, 0.17, 0.08).lerp(new THREE.Color(0.22, 0.36, 0.12), day);
-    this.renderer.toneMappingExposure = 1.35 + 0.0 * day;
+    this.hemi.groundColor.set(0.085, 0.15, 0.06).lerp(new THREE.Color(0.22, 0.36, 0.12), day);
+    this.renderer.toneMappingExposure = 1.08 + 0.04 * day;
     if (Math.abs(hours - this.envHours) > 0.45 || (hours < this.envHours - 1)) this.updateEnv(hours);
-    const envI = 0.55 + 0.2 * day; this.scene.environmentIntensity = envI * (1 - gold * 0.2);
+    const envI = 0.21 + 0.52 * day; this.scene.environmentIntensity = envI * (1 - gold * 0.2);
 
     // clouds drift and are tinted by the light
     this.cloudMat.color.set(0.06, 0.07, 0.11).lerp(new THREE.Color(1, 1, 1), day).lerp(new THREE.Color(1, 0.7, 0.55), gold * 0.5);
