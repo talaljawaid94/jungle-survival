@@ -101,6 +101,9 @@ async function build() {
   ui.on.close = () => { ui.closePanel(); if (G.state === 'play' && !G.paused) ctl.lock(); };
   ui.on.quit = () => { save(); location.reload(); };
   ui.on.setting = (k, v) => applySetting(k, v);
+  ui.on.pause = () => { if (G.state === 'play' && !G.paused) { G.paused = true; ui.showPause(true); ctl.unlock(); } };
+  ui.on.openSettings = () => { if (G.state === 'play') { if (!G.paused) { G.paused = true; ui.showPause(true); } ctl.unlock(); ui.openPanel('settings'); } };
+  ui.on.photo = () => { photoReq = true; ui.toast('Photo saved'); };
   for (const k of Object.keys(ui.settings)) applySetting(k, ui.settings[k]);
   document.getElementById('compass').style.display = ui.settings.compass ? '' : 'none';
 
@@ -121,6 +124,20 @@ function applySetting(k, v) {
   else if (k === 'invertY') player.invertY = v;
   else if (k === 'fov') player.baseFov = v;
 }
+
+// name of the area the survivor is in, for the HUD
+function placeName() {
+  const p = player.pos, h = world.heightAt(p.x, p.z), c = world.crash;
+  if (player.swimming) return h < -4 ? 'Open Water' : 'Shallows';
+  if (Math.hypot(p.x - c.x, p.z - c.z) < 30) return 'Crash Site';
+  for (const f of structures.fires) if (Math.hypot(p.x - f.x, p.z - f.z) < 12) return 'Campsite';
+  if (world.isFresh(p.x, p.z) || world.nearLake(p.x, p.z, 4)) return 'Freshwater Lake';
+  if (h < 2.4) return 'Beach';
+  if (h > 16) return 'Highlands';
+  return 'Jungle';
+}
+let photoReq = false;
+function takePhoto() { if (!photoReq) return; photoReq = false; const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = `jungle-survival-day${G.day}.png`; a.click(); }
 
 function resetAll() {
   world.reset(); structures.clear(); animals.reset(); stats.reset(); inv.clear(); gameplay.reset();
@@ -241,6 +258,7 @@ function step(dt, t) {
   if (ctl.hit('Escape') && G.modal) ui.requestClose();
   if (ctl.hit('KeyH')) ui.toggleHints();
   if (ctl.hit('KeyK')) { ui.setSetting('muted', !ui.settings.muted); ui.toast(ui.settings.muted ? 'Sound off' : 'Sound on'); }
+  if (ctl.hit('KeyP')) ui.on.photo();
 
   const locked = G.modal !== null || !!gameplay.sleepSeq;
   if (!gameplay.sleepSeq || gameplay.sleepSeq.t < 1.4) G.time += (dt * 24) / DAY_SECONDS;
@@ -258,7 +276,7 @@ function step(dt, t) {
   sky.update(dt, G.time, player.pos);
   updateAudioCtx(dt); audio.update(dt, audioCtx);
   const markers = [{ x: world.crash.x, z: world.crash.z, color: '#ff5b5b' }, ...structures.fires.map((f) => ({ x: f.x, z: f.z, color: '#ffb347' })), ...structures.shelters.map((q) => ({ x: q.x, z: q.z, color: '#a4c76a' }))];
-  ui.update(dt, { stats, inv, player, yaw: player.yaw, markers });
+  ui.update(dt, { stats, inv, player, yaw: player.yaw, markers, place: placeName(), objTarget: gameplay.objectiveTarget(), target: gameplay.target, prog: gameplay.busy ? gameplay.busy.t / gameplay.busy.dur : 0, atkCd: gameplay.atkCd });
   const tg = gameplay.target;
   if (tg && tg.pos && !locked && !player.dead) {
     _v.copy(tg.pos).project(camera);
@@ -270,7 +288,7 @@ function step(dt, t) {
 
   if (wakeFade > 0) { wakeFade -= dt; ui.fade(Math.max(0, wakeFade / 3.2)); }
   revealT -= dt; if (revealT <= 0) { revealT = 0.6; map.reveal(player.pos.x, player.pos.z); }
-  if ((miniTick += 1) % 3 === 0) map.drawMini(ui.minimap, player, structures, world.crash);
+  if ((miniTick += 1) % 3 === 0) map.drawMini(ui.minimap, player, structures, world.crash, gameplay.objectiveTarget());
   if (G.modal === 'map' && (mapTick += 1) % 15 === 0) drawFullMap();
   if (performance.now() - lastSave > 30000) { lastSave = performance.now(); save(); }
 
@@ -296,7 +314,7 @@ let simT = 1000;
 function advance(sec, hold = {}) {
   for (let i = 0; i < sec * 30; i++) { for (const k of Object.keys(hold)) { if (k === 'Mouse') { if (hold[k] && i % 20 === 0) ctl.mousePressed = true; continue; } if (hold[k]) { ctl.keys.add(k); if (i === 0) ctl.pressed.add(k); } } simT += 1 / 30; step(1 / 30, simT); ctl.endFrame(); }
   for (const k of Object.keys(hold)) ctl.keys.delete(k); if (hold.Mouse) { /* mousePressed consumed by gameplay */ }
-  renderFrame(1 / 30, simT);
+  renderFrame(1 / 30, simT); takePhoto();
 }
 
 function frame() {
@@ -307,7 +325,7 @@ function frame() {
   const t0 = performance.now();
   step(dt, clock.elapsedTime);
   const t1 = performance.now();
-  renderFrame(dt, clock.elapsedTime);
+  renderFrame(dt, clock.elapsedTime); takePhoto();
   const t2 = performance.now();
   ctl.endFrame();
   window.__perf = { step: t1 - t0, render: t2 - t1, dt };

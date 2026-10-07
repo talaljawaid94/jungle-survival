@@ -173,6 +173,16 @@ export class Gameplay {
     const jiggle = ease(0.28, 0.5, u) * (1 - ease(0.5, 0.6, u)) * Math.sin(u * 60) * 0.012, lift = ease(0.5, 0.95, u);
     lid.position.set(0, o.obj3d.userData.lidY + jiggle + 0.2 * lift, 0.18 * lift); lid.rotation.set(-0.5 * lift, 0, 0);
   }
+  // where the current objective points (for the distance and arrow in the HUD), or null when it is not a place
+  objectiveTarget() {
+    const p = this.player.pos, near = (list) => { let best = null, bd = 1e9; for (const o of list) { const d = Math.hypot(o.x - p.x, o.z - p.z); if (d < bd) { bd = d; best = o; } } return best; };
+    switch (this.objIdx) {
+      case 0: return near(this.world.crates.filter((c) => !c.data.opened));
+      case 1: { let best = null, bd = 1e9; for (const l of this.world.lakes) { const d = Math.hypot(l.x - p.x, l.z - p.z); if (d < bd) { bd = d; best = l; } } return best; }
+      case 5: case 6: return near([...this.structures.fires, ...(this.objIdx === 6 ? this.structures.shelters : [])]);
+      default: return null;
+    }
+  }
   cancelBusy() {
     if (this.busy) { const b = this.busy; if (b.act === 'crate' && b.obj && !b.obj.data.opened) { const lid = b.obj.obj3d.userData.lid; if (lid) { lid.position.set(0, b.obj.obj3d.userData.lidY, 0); lid.rotation.set(0, 0, 0); } } this.busy = null; this.ui.setProgress(null); }
     this.player.gathering = false; this.player.act = null;
