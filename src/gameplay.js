@@ -29,9 +29,9 @@ const OBJECTIVES = [
 export class Gameplay {
   constructor(o) {
     Object.assign(this, o);
-    this.flags = {}; this.objIdx = 0; this.busy = null; this.atkCd = 0; this.sleepSeq = null; this.target = null; this.objTimer = 0; this.chopTick = 0;
+    this.flags = {}; this.objIdx = 0; this.busy = null; this.useAct = null; this.atkCd = 0; this.sleepSeq = null; this.target = null; this.objTimer = 0; this.chopTick = 0;
   }
-  reset() { this.flags = {}; this.objIdx = 0; this.busy = null; this.sleepSeq = null; }
+  reset() { this.flags = {}; this.objIdx = 0; this.busy = null; this.useAct = null; this.sleepSeq = null; }
 
   toast(m) { this.ui.toast(m); }
   give(id, n = 1) {
@@ -158,6 +158,9 @@ export class Gameplay {
         if (t.dur <= 0.01) { t.perform(); this.afterInvChange(); } else this.busy = { ...t, t: 0 };
       }
     }
+    // item-use animation (drink / eat / bandage): the effect lands partway through
+    if (this.useAct) { const ua = this.useAct; ua.t += dt; if (!ua.applied && ua.t >= ua.dur * 0.6) { ua.applied = true; this.finishUse(ua); } if (ua.t >= ua.dur) this.useAct = null; }
+    if (!this.busy) this.player.act = this.useAct ? { kind: this.useAct.kind, t: this.useAct.t, u: Math.min(1, this.useAct.t / this.useAct.dur), x: 0, z: 0 } : null;
     this.ui.setPrompt(t ? (t.perform ? `[E] ${t.label}${t.dur > 0.4 ? ' (hold)' : ''}` : t.label) : null);
 
     if (ctl.mousePressed) this.attack();
@@ -185,7 +188,7 @@ export class Gameplay {
   }
   cancelBusy() {
     if (this.busy) { const b = this.busy; if (b.act === 'crate' && b.obj && !b.obj.data.opened) { const lid = b.obj.obj3d.userData.lid; if (lid) { lid.position.set(0, b.obj.obj3d.userData.lidY, 0); lid.rotation.set(0, 0, 0); } } this.busy = null; this.ui.setProgress(null); }
-    this.player.gathering = false; this.player.act = null;
+    this.player.gathering = false; this.player.act = null; this.useAct = null;
   }
   afterInvChange() { this.ui.invDirty = true; this.player.setEquipped(this.inv.equipped); }
   select(i) { this.inv.selected = i; this.afterInvChange(); this.audio.click(); }
@@ -213,8 +216,22 @@ export class Gameplay {
   }
 
   // ------------------------------------------------------------------ using items
+  // using food, water or medicine plays an animation first; the effect lands about 60% of the way through it
   useSlot(i) {
     const s = this.inv.slots[i]; if (!s) return; const d = ITEMS[s.id], st = this.stats;
+    if (this.useAct) return;
+    if (d.kind === 'med' || d.kind === 'food') {
+      if (d.kind === 'med' && st.health >= 99) return this.toast('You are already healthy');
+      const drink = d.kind === 'food' && d.thirst && !d.hunger;
+      this.useAct = { slot: i, id: s.id, kind: d.kind === 'med' ? 'bandage' : drink ? 'drink' : 'eat', t: 0, dur: drink ? 1.9 : d.kind === 'med' ? 1.7 : 1.5, applied: false }; return;
+    }
+    this.useNow(i, s, d, st);
+  }
+  finishUse(act) {
+    const i = act.slot, s = this.inv.slots[i]; if (!s || s.id !== act.id) return;                   // the item moved or was dropped meanwhile
+    this.useNow(i, s, ITEMS[s.id], this.stats);
+  }
+  useNow(i, s, d, st) {
     if (d.kind === 'med') {
       if (st.health >= 99) return this.toast('You are already healthy');
       st.heal(d.heal); this.inv.removeAt(i, 1); this.audio.pickup(); this.toast(`+${d.heal} health`);

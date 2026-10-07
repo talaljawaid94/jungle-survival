@@ -70,7 +70,7 @@ export function createModelRig(tools) {
   const ANG = [0.9, 1.25, 0.95];
   const curl = (side, c) => {
     for (const f of FING[side]) f.j.forEach((x, i) => { x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * f.k * ANG[i])); });
-    THUMB[side].forEach((x, i) => { x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * [0.25, 0.5, 0.5][i])); });
+    THUMB[side].forEach((x, i) => { if (x.qf) x.b.quaternion.copy(x.q0).slerp(x.qf, Math.min(1, c * 1.05)); else x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * [0.25, 0.5, 0.5][i])); });
   };
   // fit the grip point: close the fist once and put the handle in the middle of the cavity the fingers form
   if (hand && hold.userData.palmN) {
@@ -80,6 +80,24 @@ export function createModelRig(tools) {
     if (n) { c.divideScalar(n); hold.position.copy(c).addScaledVector(hold.userData.palmN, -0.004).add(hold.position.clone().sub(c).multiplyScalar(0.0)); const mid = hold.userData.knuckle; hold.position.lerp(mid, 0.45); }
     curl('r', 0); root.updateMatrixWorld(true);
   }
+  // thumb wrap: with the fingers closed, search the thumb's joint angles that bring its pad down onto the first two fingers (on the outside of the fist,
+  // away from the handle), so the thumb pins the handle from the other side. Solved per hand at startup, so it follows this rig's bone axes.
+  const solveThumb = (side) => {
+    const J = THUMB[side]; if (J.length < 3 || !bones[`index_02_${side}`] || !bones[`middle_02_${side}`]) return;
+    curl(side, 1); J.forEach((x) => x.b.quaternion.copy(x.q0)); root.updateMatrixWorld(true);
+    const W = (n) => bones[n].getWorldPosition(new THREE.Vector3()), cen = new THREE.Vector3(); let n = 0;
+    for (const f of ['index', 'middle', 'ring', 'pinky']) for (const j of [2, 3]) { cen.add(W(`${f}_0${j}_${side}`)); n++; }
+    cen.divideScalar(n).lerp(W(`index_01_${side}`).add(W(`pinky_01_${side}`)).multiplyScalar(0.5), 0.45);       // middle of the cavity the fingers form
+    const M = W(`index_02_${side}`).add(W(`middle_02_${side}`)).multiplyScalar(0.5), T = M.clone().add(M.clone().sub(cen).normalize().multiplyScalar(0.017));
+    const AX = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)], P = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], q = new THREE.Quaternion(), t = new THREE.Quaternion(), p3 = new THREE.Vector3(), p2 = new THREE.Vector3();
+    const apply = () => { J.forEach((x, i) => { q.identity(); for (let a = 0; a < 3; a++) q.multiply(t.setFromAxisAngle(AX[a], P[i][a])); x.b.quaternion.copy(x.q0).multiply(q); }); J[0].b.updateMatrixWorld(true); };
+    const cost = () => { J[2].b.getWorldPosition(p3); J[1].b.getWorldPosition(p2); const tip = p3.clone().add(p3.clone().sub(p2).normalize().multiplyScalar(0.026)); let r = 0; for (const row of P) for (const v of row) r += v * v; return tip.distanceToSquared(T) + 0.0006 * r; };
+    for (let pass = 0; pass < 6; pass++) for (let i = 0; i < 3; i++) for (let a = 0; a < 3; a++) {
+      let best = P[i][a], bc = Infinity; for (let v = -1.3; v <= 1.3001; v += 0.1) { P[i][a] = v; apply(); const c = cost(); if (c < bc) { bc = c; best = v; } } P[i][a] = best;
+    }
+    apply(); J.forEach((x) => { x.qf = x.b.quaternion.clone(); x.b.quaternion.copy(x.q0); }); root.updateMatrixWorld(true);
+  };
+  solveThumb('r'); solveThumb('l');
   const motion = motionData ? new Motion(motionData) : null;
   const acc = {}, _p = new THREE.Quaternion(), _m = new THREE.Quaternion(), _d = new THREE.Quaternion();
   // mot = { mocapW, procW: {bone: weight}, lift } blends the procedural pose (tools, attacks, crouching...) with the motion-capture pose

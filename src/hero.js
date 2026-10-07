@@ -508,6 +508,22 @@ export function createCharacter() {
         set('wrL', 0.3 * reach - 0.4 * lift + 0.16 * fumble); set('wrR', 0.3 * reach - 0.4 * lift - 0.16 * fumble);
         add('spine', 0.5 * reach - 0.28 * lift, 0.06 * tug, 0); add('head', 0.16 * reach - 0.14 * lift, 0, 0);
         add('hipL', -0.4 * reach, 0, 0); add('hipR', -0.4 * reach, 0, 0); add('kneeL', 0.5 * reach); add('kneeR', 0.5 * reach); st.dip = 0.1 * reach; pelvisY -= st.dip;
+      } else if (act && (act.kind === 'drink' || act.kind === 'eat' || act.kind === 'bandage')) {
+        const u = act.u;
+        if (act.kind === 'drink') {                                                                                   // raise the bottle, tip it, head back, swallow, lower it
+          const up = ease(0, 0.28, u) * (1 - ease(0.8, 1, u)), tilt = ease(0.3, 0.5, u) * (1 - ease(0.72, 0.84, u)), gulp = Math.max(0, Math.sin((u - 0.5) * 22)) * ease(0.5, 0.56, u) * (1 - ease(0.7, 0.76, u));
+          const DP = DRINK; set('shR', DP.sh * up + DP.shT * tilt, DP.shY * up, DP.shZ * up); set('elR', ...flexE('R', DP.el * up)); set('wrR', ...flexE('R', DP.wr * up + DP.wrT * tilt, DP.wrY * up));
+          set('shL', -0.18 * up, 0, -0.1); set('elL', -0.5 * up);
+          add('head', -0.42 * tilt + 0.05 * gulp, 0, 0); add('neck', -0.14 * tilt, 0, 0); add('spine', -0.1 * tilt, 0, 0);
+        } else if (act.kind === 'eat') {                                                                              // hand to mouth for a couple of bites
+          const up = ease(0, 0.25, u) * (1 - ease(0.82, 1, u)), bite = Math.max(0, Math.sin(u * 30)) * up;
+          set('shR', -0.75 * up, 0, 0.2 * up); set('elR', ...flexE('R', -2.3 * up - 0.12 * bite)); set('wrR', ...flexE('R', -0.3 * up));
+          add('head', 0.1 * up + 0.07 * bite, 0, 0); add('spine', 0.05 * up, 0, 0);
+        } else {                                                                                                      // bandage: the right hand winds across the left forearm
+          const up = ease(0, 0.22, u) * (1 - ease(0.85, 1, u)), wind = Math.sin(u * 24) * up;
+          set('shL', -0.8 * up, 0, -0.15 * up); set('elL', ...flexE('L', -1.5 * up)); set('shR', -0.9 * up + 0.1 * wind, 0.3 * up, 0.2 * up); set('elR', ...flexE('R', -1.4 * up + 0.2 * wind)); set('wrR', ...flexE('R', 0.2 * wind));
+          add('spine', 0.18 * up, 0, 0); add('head', 0.22 * up, 0, 0);
+        }
       } else if (act && act.kind === 'chop' && st.attackT < 0) {                                                         // ready stance between swings: feet apart, knees soft, balanced
         set('shL', -0.5, 0.15, -0.2); set('elL', -0.9); add('spine', 0.12, 0.1, 0); add('hipL', -0.12, 0, 0.06); add('hipR', 0.1, 0, -0.06); add('kneeL', 0.18); add('kneeR', 0.14); st.dip = 0.04; pelvisY -= st.dip;
       }
@@ -564,6 +580,14 @@ export function createCharacter() {
   // so the body is lifted by however far the lowest foot sits under the surface at its own position
   const _fp = new THREE.Vector3(); st.lift = 0;
   // how far the wrist rolls (radians) to carry each tool: knife forward and down, axe up and forward, the long and loose items upright
+  // This rig rests in an A-pose and the pose system adducts the shoulder (ARM_ADDUCT) after the elbow bend, which would swing a bent forearm out sideways.
+  // flexE(side, x) returns the elbow/wrist Euler that bends the forearm in the sagittal plane regardless of that adduction.
+  const _fz = new THREE.Vector3(0, 0, 1), _fq0 = new THREE.Quaternion(), _fq1 = new THREE.Quaternion(), _fe = new THREE.Euler();
+  const flexE = (side, x, y = 0) => {
+    if (!hasHeroModel()) return [x, y, 0];
+    _fq0.setFromAxisAngle(_fz, (side === 'L' ? -1 : 1) * 0.72); _fq1.copy(_fq0).invert().multiply(new THREE.Quaternion().setFromEuler(_fe.set(x, y, 0))).multiply(_fq0); _fe.setFromQuaternion(_fq1, 'XYZ'); return [_fe.x, _fe.y, _fe.z];
+  };
+  const DRINK = { sh: -1.9, shT: -0.15, shY: 0.8, shZ: 0.6, el: -1.0, wr: 0, wrT: -0.5, wrY: 0 };       // right-arm pose for drinking (shoulder, elbow, wrist)
   const TOOL_ROLL = { knife: -0.35, stone_axe: 0.55, spear: 0.8, torch: 0.8, flare: 0.8, bottle: 0.8 };
   const mot = { mocapW: 0, procW: {}, lift: 0, curlR: 0.25, curlL: 0.25 };
   function updateAll(dt, s) {
@@ -574,7 +598,7 @@ export function createCharacter() {
       // which parts of the body are driven by motion capture right now: walking, running and idling on the ground use it for the whole body;
       // tools, attacks and the other poses (swim, jump, kneel, sleep, death) hand control back to the procedural pose, blended over ~0.1 s
       const k = 1 - Math.exp(-dt * 10), holding = st.tool && st.tool !== 'none';
-      const standAct = s.act && (s.act.kind === 'crate' || s.act.kind === 'chop');
+      const standAct = s.act && ['crate', 'chop', 'drink', 'eat', 'bandage'].includes(s.act.kind);
       const loco = !s.swim && !s.air && !s.dead && !s.sleeping && (!s.gathering || standAct);
       const attacking = st.attackT >= 0, upper = attacking || standAct, legsProc = (standAct || attacking) ? 0.55 : 0;
       st.mw += ((loco ? 1 : 0) - st.mw) * k; st.rw += ((holding || upper ? 1 : 0) - st.rw) * k; st.uw += ((upper ? 1 : 0) - st.uw) * k; st.lw += (legsProc - st.lw) * k;
