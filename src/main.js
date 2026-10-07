@@ -318,6 +318,6 @@ setTimeout(async () => {
   try { await loadHeroModel(MODELS + 'survivor.glb'); } catch (e) { console.warn('hero model failed, using procedural hero', e); }
   try { await loadWreckModel(MODELS + 'helicopter_wreck.glb'); } catch (e) { console.warn('wreck model failed', e); }
   try { await loadHelicopterModel(MODELS + 'helicopter.glb'); } catch (e) { console.warn('helicopter model failed, using procedural helicopter', e); }
-  for (const t of ['deer', 'boar', 'jaguar']) { try { await loadAnimalModel(t, `${MODELS}${t}.glb`); } catch (e) { console.warn(t + ' model failed, using procedural version', e); } }
+  for (const t of ['deer', 'boar', 'jaguar', 'rabbit']) { try { await loadAnimalModel(t, `${MODELS}${t}.glb`); } catch (e) { console.warn(t + ' model failed, using procedural version', e); } }
   await build(); frame();
 }, 30);

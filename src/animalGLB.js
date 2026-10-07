@@ -12,6 +12,7 @@ export async function loadAnimalModel(type, url) {
 }
 
 const _e = new THREE.Euler(), _id = new THREE.Quaternion();
+const MODEL_SCALE = { rabbit: 0.82 };       // the rabbit is modelled a little large so its detail reads; this brings it to a believable size
 
 function rigOf(root) {
   const bones = {}, rest = {};
@@ -58,6 +59,7 @@ const FUR = {
   deer:   { layers: 12, length: 0.034, density: 30, strands: 5200, r: 1.7, droop: 0.22, comb: 0.45 },
   boar:   { layers: 12, length: 0.055, density: 22, strands: 3200, r: 2.1, droop: 0.12, comb: 0.35 },
   jaguar: { layers: 9,  length: 0.014, density: 34, strands: 6500, r: 1.5, droop: 0.10, comb: 0.5 },
+  rabbit: { layers: 9,  length: 0.011, density: 44, strands: 6000, r: 1.5, droop: 0.06, comb: 0.4, legY: [0.10, 0.04], headZ: [0.20, 0.32] },
 };
 function addFurShells(model, type) {
   const cfg = FUR[type]; if (!cfg) return [];
@@ -73,7 +75,7 @@ function addFurShells(model, type) {
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uOff = { value: off };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uOff;').replace('#include <begin_vertex>',
-        'vec3 nn = normalize(normal); float fk = mix(1.0, 0.35, smoothstep(0.40, 0.20, position.y)) * mix(1.0, 0.35, smoothstep(0.68, 0.85, position.z));' +
+        'vec3 nn = normalize(normal); float fk = mix(1.0, 0.35, smoothstep(' + (cfg.legY || [0.40, 0.20])[0].toFixed(3) + ', ' + (cfg.legY || [0.40, 0.20])[1].toFixed(3) + ', position.y)) * mix(1.0, 0.35, smoothstep(' + (cfg.headZ || [0.68, 0.85])[0].toFixed(3) + ', ' + (cfg.headZ || [0.68, 0.85])[1].toFixed(3) + ', position.z));' +
         'vec3 transformed = vec3(position) + nn * uOff * fk + vec3(0.0, -' + cfg.droop.toFixed(3) + ' * uOff * fk * (1.0 + uOff * 8.0), -' + cfg.comb.toFixed(3) + ' * uOff * fk * max(0.0, 1.0 - abs(nn.y)));');
     };
     m.customProgramCacheKey = () => 'fur' + type + i;
@@ -84,7 +86,7 @@ function addFurShells(model, type) {
 }
 
 export function buildAnimalGLB(type, sp) {
-  const src = loaded[type]; const model = cloneSkinned(src); const g = new THREE.Group(); const holder = new THREE.Group(); holder.add(model); g.add(holder);   // the exported models face +Z, which is the game's forward (animals move along sin(heading), cos(heading))
+  const src = loaded[type]; const model = cloneSkinned(src); const g = new THREE.Group(); const holder = new THREE.Group(); holder.scale.setScalar(MODEL_SCALE[type] || 1); holder.add(model); g.add(holder);   // the exported models face +Z, which is the game's forward (animals move along sin(heading), cos(heading))
   const mats = [];
   model.traverse((o) => {
     if (o.isMesh) {
@@ -95,7 +97,7 @@ export function buildAnimalGLB(type, sp) {
   });
   const R = rigOf(model), st = { t: Math.random() * 10, graze: 0, flick: 0, earT: 0 };
   const shells = addFurShells(model, type), _wp = new THREE.Vector3(); for (const s of shells) mats.push(s.material);
-  const animate = type === 'deer' ? deerAnimate : type === 'boar' ? boarAnimate : type === 'jaguar' ? jaguarAnimate : () => {};
+  const animate = type === 'deer' ? deerAnimate : type === 'boar' ? boarAnimate : type === 'jaguar' ? jaguarAnimate : type === 'rabbit' ? rabbitAnimate : () => {};
   function run(a, dt) {
     st.t += dt; animate(R, st, a, dt);
     if (shells.length) { g.getWorldPosition(_wp); const d = _wp.distanceTo(furCam); for (let i = 0; i < shells.length; i++) shells[i].visible = d < 14 || (d < 28 && i % 3 === 2); }
@@ -176,4 +178,24 @@ function jaguarAnimate(R, st, a, dt) {
   rot('tail1', -0.05 + Math.sin(t * sp + a.phase) * 0.05, Math.sin(t * sp * 0.8 + a.phase) * lash * 0.5); rot('tail2', 0, Math.sin(t * sp * 0.8 + a.phase - 0.8) * lash * 0.7); rot('tail3', 0, Math.sin(t * sp * 0.8 + a.phase - 1.6) * lash);
   st.flick -= dt; if (st.flick <= 0 && Math.random() < dt * 0.3) st.flick = 0.25; const fl = st.flick > 0 ? Math.sin(st.flick * 45) * 0.25 : 0;
   rot('ear_l', 0, 0, fl + (chase ? 0.25 : 0)); rot('ear_r', 0, 0, -fl * 0.7 - (chase ? 0.25 : 0));
+}
+
+// rabbit: hops. Airborne while sin(ph) > 0 (front legs reach, hind legs trail), gathers on the ground between hops; twitches and flicks its ears at rest.
+function rabbitAnimate(R, st, a, dt) {
+  const { rot, bones, rest } = R; const t = st.t, spd = a.speed, moving = spd > 0.25, run = spd > 3.0, ph = a.phase * 0.8;
+  const s = Math.sin(ph), air = moving ? Math.max(0, s) : 0, gather = moving ? Math.max(0, -s) : 0, hopH = run ? 0.20 : 0.07;
+  const fl = (side) => {
+    rot(`f_upper_${side}`, -0.9 * air + 0.25 * gather, 0, 0); rot(`f_lower_${side}`, 0.5 * air - 0.2 * gather, 0, 0); rot(`f_paw_${side}`, -0.3 * air, 0, 0);
+    rot(`h_thigh_${side}`, 0.85 * air * (run ? 1 : 0.6) - 0.35 * gather, 0, 0); rot(`h_shin_${side}`, -0.6 * air + 0.35 * gather, 0, 0); rot(`h_foot_${side}`, -0.45 * air + 0.2 * gather, 0, 0);
+  };
+  fl('l'); fl('r');
+  if (bones.root) bones.root.position.copy(rest.root.p0).add(new THREE.Vector3(0, air * hopH - gather * 0.012, 0).applyQuaternion(rest.root.Pi));
+  const breathe = Math.sin(t * 3.2) * 0.012;
+  rot('spine1', breathe + (moving ? -0.22 * air + 0.12 * gather + (run ? -0.05 : 0) : 0), 0, 0); rot('spine2', breathe * 0.6 + (moving ? -0.18 * air + 0.10 * gather : 0), 0, 0);
+  const idle = !moving, twitch = idle ? Math.max(0, Math.sin(t * 2.1 + a.phase)) ** 6 : 0, look = idle ? Math.sin(t * 0.5 + a.phase) * 0.45 : 0;
+  rot('neck', (moving ? 0.25 * air - 0.1 * gather : 0.05 + (idle ? 0.1 : 0)), look * 0.4, 0); rot('head', (moving ? -0.15 * air : 0) + Math.sin(t * 22) * 0.025 * twitch, look * 0.6, 0);
+  st.flick -= dt; if (st.flick <= 0 && Math.random() < dt * 0.5) st.flick = 0.3; const f = st.flick > 0 ? Math.sin(st.flick * 40) * 0.2 : 0;
+  const back = run ? 0.9 : moving ? 0.35 : 0;                                             // ears lay back when running
+  rot('ear_l', back + f, 0, 0.12 + Math.sin(t * 0.7 + a.phase) * 0.06); rot('ear_r', back - f * 0.6, 0, -0.12 - Math.sin(t * 0.6 + a.phase) * 0.06);
+  rot('tail', 0.1 * air, 0, 0);
 }
