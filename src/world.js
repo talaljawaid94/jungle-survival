@@ -284,19 +284,22 @@ export class World {
       const chunks = new Map();
       for (const o of list) { const key = Math.floor((o.x + SIZE / 2) / 100) * 16 + Math.floor((o.z + SIZE / 2) / 100); if (!chunks.has(key)) chunks.set(key, []); chunks.get(key).push(o); }
       for (const group of chunks.values()) {
-        const meshes = parts.filter((p) => p.geo).map((p) => {
+        const mk = (p) => {
           const mesh = new THREE.InstancedMesh(p.geo, p.mat, group.length);
           mesh.castShadow = !!(cfg.shadow && p.shadow !== false); mesh.receiveShadow = true;
           if (p.depth) mesh.customDepthMaterial = p.depth;
           return mesh;
-        });
+        };
+        const nearMeshes = parts.filter((p) => p.geo).map(mk), farMeshes = cfg.lod ? cfg.lod.filter((p) => p.geo).map(mk) : [];
+        for (const f of farMeshes) f.visible = false;
+        const meshes = nearMeshes.concat(farMeshes);
         group.forEach((o, i) => {
           const s = cfg.scale[0] + rnd() * (cfg.scale[1] - cfg.scale[0]);
           q.setFromAxisAngle(up, rnd() * 6.283); pos.set(o.x, o.y + (cfg.lift ?? -0.1), o.z); scl.set(s, s * (cfg.stretchY ? 0.85 + rnd() * 0.3 : 1), s);
           m.compose(pos, q, scl);
           tint.setRGB(0.84 + rnd() * 0.26, 0.88 + rnd() * 0.24, 0.84 + rnd() * 0.22);
           for (const mesh of meshes) { mesh.setMatrixAt(i, m); mesh.setColorAt(i, tint); }
-          if (kind !== 'rock' && kind !== 'stone' && Math.hypot(o.x - cr.x, o.z - cr.z) < 34) (this.blastList ||= []).push({ meshes, idx: i, m: m.clone(), tint: tint.clone(), x: o.x, z: o.z, kind, soft: !!cfg.decor || kind === 'bush' || kind === 'berry' });
+          if (kind !== 'rock' && kind !== 'stone' && Math.hypot(o.x - cr.x, o.z - cr.z) < 34) (this.blastList ||= []).push({ meshes: meshes, idx: i, m: m.clone(), tint: tint.clone(), x: o.x, z: o.z, kind, soft: !!cfg.decor || kind === 'bush' || kind === 'berry' });
           if (cfg.decor) return;
           o.m0 = m.clone();
           o.kind = kind; o.meshes = meshes; o.idx = i; o.scale = s; o.id = this.items.length; o.removed = false; o.cooldown = 0;
@@ -307,15 +310,17 @@ export class World {
           if (cfg.cr) this.chash.add(o, o.x, o.z);
         });
         for (const mesh of meshes) { mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); this.scene.add(mesh); }
+        const bs = nearMeshes[0].boundingSphere; (this.chunkRecs ||= []).push({ near: nearMeshes, far: farMeshes, x: bs.center.x, y: bs.center.y, z: bs.center.z, r: bs.radius, maxDist: cfg.maxDist || 0 });
       }
     };
 
     const dens = (f) => (x, z) => f * (0.45 + 0.55 * (noise.fbm(x * 0.012 + 50, z * 0.012, 2) * 0.5 + 0.5));
     const treeParts = (t, leaf, dep) => [{ geo: t.trunk, mat: this.barkMat }, { geo: t.foliage, mat: leaf, depth: dep }, { geo: t.extra, mat: this.vegMat }];
     const T = { minH: 2.4, maxH: 33, maxSlope: 0.7, scale: [0.8, 1.4], cr: 0.5, interact: true, ir: 1.8, shadow: true, spacing: 2.6, density: dens(1) };
-    place('tree', treeParts(jungleTree(11, 'tall'), this.leafMat, dA), 700, T);
-    place('tree', treeParts(jungleTree(23, 'tall'), this.leafMatB, dB), 500, T);
-    place('tree', treeParts(jungleTree(37, 'mid'), this.leafMat, dA), 400, T);
+    const TL = (seed, kind, leaf, dep) => ({ ...T, lod: treeParts(jungleTree(seed, kind, 1), leaf, dep) });
+    place('tree', treeParts(jungleTree(11, 'tall'), this.leafMat, dA), 700, TL(11, 'tall', this.leafMat, dA));
+    place('tree', treeParts(jungleTree(23, 'tall'), this.leafMatB, dB), 500, TL(23, 'tall', this.leafMatB, dB));
+    place('tree', treeParts(jungleTree(37, 'mid'), this.leafMat, dA), 400, TL(37, 'mid', this.leafMat, dA));
     place('fruit', treeParts(jungleTree(5, 'fruit'), this.leafMatB, dB), 60, { minH: 2.6, maxH: 22, maxSlope: 0.5, scale: [0.9, 1.2], cr: 0.45, interact: true, ir: 1.8, shadow: true, spacing: 4, data: () => ({ fruits: 3 }) });
     for (const sd of [3, 9, 15]) {
       const pg = palmGeo(sd);
@@ -329,8 +334,8 @@ export class World {
     const stickGeo = new THREE.CylinderGeometry(0.03, 0.04, 1.1, 6); stickGeo.rotateZ(Math.PI / 2); stickGeo.translate(0, 0.05, 0); paint(stickGeo, 0x6b4a2b);
     place('stick', [{ geo: prep(stickGeo), mat: this.vegMat }], 260, { minH: 1.5, maxH: 30, maxSlope: 0.6, scale: [0.8, 1.3], interact: true, ir: 1.3, clear: 2, lift: 0.0 });
     // undergrowth (decoration only)
-    place('grass', [{ geo: grassGeo(), mat: this.grassMat }], 9000, { minH: 1.6, maxH: 32, maxSlope: 0.65, scale: [0.8, 1.7], clear: 0, decor: true, avoidLake: true, lakePad: -3 });
-    place('fern', [{ geo: fernGeo(4), mat: this.fernMat }], 2200, { minH: 2.2, maxH: 30, maxSlope: 0.6, scale: [0.8, 1.6], clear: 0, decor: true, avoidLake: true, lakePad: 0, lift: 0.02 });
+    place('grass', [{ geo: grassGeo(), mat: this.grassMat }], 9000, { maxDist: 150, minH: 1.6, maxH: 32, maxSlope: 0.65, scale: [0.8, 1.7], clear: 0, decor: true, avoidLake: true, lakePad: -3 });
+    place('fern', [{ geo: fernGeo(4), mat: this.fernMat }], 2200, { maxDist: 200, minH: 2.2, maxH: 30, maxSlope: 0.6, scale: [0.8, 1.6], clear: 0, decor: true, avoidLake: true, lakePad: 0, lift: 0.02 });
     place('broad', [{ geo: broadLeafGeo(6), mat: this.broadMat }], 700, { minH: 2.2, maxH: 28, maxSlope: 0.55, scale: [0.9, 1.7], clear: 6, decor: true, avoidLake: true, lakePad: 0, lift: 0.02 });
   }
 
@@ -409,6 +414,16 @@ export class World {
   applyRemoved(ids) { for (const id of ids) { const o = this.items[id]; if (o && !o.removed && o.kind !== 'crate') this.removeItem(o); } }
   openCrate(o) { o.data.opened = true; if (o.obj3d.userData.lid) { o.obj3d.userData.lid.position.set(0.15, 0.04, 0.98); o.obj3d.userData.lid.rotation.set(0.03, 0.4, 0.05); } }
 
+  // distance culling and tree LOD: chunks beyond the fog's opaque distance are skipped, far trees use a lighter model
+  updateLOD(cam, fogDensity) {
+    const fogD = Math.min(650, 2.3 / Math.max(fogDensity, 0.0035));
+    for (const c of this.chunkRecs || []) {
+      const dx = c.x - cam.x, dz = c.z - cam.z, d = Math.max(0, Math.hypot(dx, dz) - c.r), lim = c.maxDist ? Math.min(c.maxDist, fogD) : fogD, vis = d < lim;
+      const useNear = d < 95;
+      for (const m of c.near) m.visible = vis && (useNear || !c.far.length);
+      for (const m of c.far) m.visible = vis && !useNear;
+    }
+  }
   update(dt, t) {
     this.timeU.value = t;
     this.waterTex.offset.x = (t * 0.004) % 1; this.waterTex.offset.y = (t * 0.0025) % 1;

@@ -27,6 +27,8 @@ export class Intro {
     this.dust = new Emitter(scene, { count: 140, rate: 0, life: 3.4, speed: 2.5, spread: 20, size: 4, grow: 9, alpha: 0.5, color: 0x8a7a5e, drift: new THREE.Vector3(0, 0, 0) });
     this.ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 64), new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; scene.add(this.ring);
     this.flash = new THREE.PointLight(0xffb060, 0, 140, 1.4); scene.add(this.flash); this.blastT = -1;
+    this.wreckLight = new THREE.PointLight(0xff7a30, 0, 18, 1.5); scene.add(this.wreckLight);       // created up front: adding a light mid-game recompiles every shader and stalls
+    this.wreckReady = false;
     const c = world.crash; this.c = new THREE.Vector3(c.x, c.y, c.z);
     // approach from whichever side keeps the whole flight path over jungle rather than open sea
     let best = -1, bd = null;
@@ -42,29 +44,43 @@ export class Intro {
     this.t = 0; this.running = true; this.done = false; this.crashed = false; this.heli.group.visible = true; this.shot = 0; this.beepT = 0; this.smoke.active = false; this.fire.active = false;
     this.heli.group.rotation.order = 'YXZ'; this.heli.blur.visible = true; this.heli.tailBlur.visible = true;
     this.audio.heliStart(); this.ui.fade(0, 0); this.ui.title('', 0);
+    this.prepareWreck();                                   // under the opening fade-in
   }
   skip() { if (this.running && this.t < T_END - 2.4) { this.t = T_END - 2.4; this.finishCrash(); } }
 
-  removeWreckScene() { if (this.wreckScene) { this.wreckScene.dispose(); this.wreckScene = null; } }
+  removeWreckScene() { if (this.wreckScene) { this.wreckScene.dispose(); this.wreckScene = null; } this.wreckReady = false; if (this.wreckLight) this.wreckLight.intensity = 0; }
   finishCrash() {
     if (!this.crashed) { this.crashed = true; this.placeWreck(); this.audio.heliStop(); }
   }
 
+  // everything heavy about the crash site (wreck model, burn textures, shaders, light, emitters) is built hidden before the crash,
+  // so the moment of impact only flips things on and does not stall the frame
+  prepareWreck() {
+    if (this.wreckReady || !hasWreckModel()) return;
+    this.removeWreckScene(); this.wreckReady = true;
+    const ws = this.wreckScene = buildWreckScene(this.scene, this.world, this.c, this.dir, true);
+    if (this.wreckSmoke) { this.wreckSmoke.dispose(this.scene); this.wreckFire.dispose(this.scene); }
+    this.wreckSmoke = new Emitter(this.scene, { count: 90, rate: 14, life: 7, speed: 2.4, spread: 0.7, size: 1.4, grow: 6, alpha: 0.5, color: 0x262626, drift: new THREE.Vector3(1.0, 0, 0.3) });
+    this.wreckSmoke.position.copy(ws.smoke);
+    this.wreckFire = new Emitter(this.scene, { count: 50, rate: 22, life: 0.8, speed: 1.6, spread: 0.5, size: 0.8, grow: 0.4, alpha: 0.8, color: 0xff7a1a, additive: true, drift: new THREE.Vector3(0, 0.8, 0) });
+    this.wreckFire.position.copy(ws.fire);
+    this.wreckSmoke.active = false; this.wreckFire.active = false;
+    this.wreckLight.position.copy(ws.fire).add(new THREE.Vector3(0, 0.5, 0)); this.wreckLight.intensity = 0.001;
+    if (this.renderer) { const on = [this.ring, ...[this.fireball, this.core, this.debris, this.embers, this.dust, this.blast, this.blastSmoke].map((e) => e.points)]; this.ring.visible = true; ws.warm(this.renderer, this.camera, on); this.ring.visible = false; }
+  }
   placeWreck() {
-    this.smoke.active = false; this.fire.active = false; let fireAt = null, smokeAt = null;
+    this.smoke.active = false; this.fire.active = false;
     if (hasWreckModel()) {
-      this.heli.group.visible = false; this.removeWreckScene(); this.wreckScene = buildWreckScene(this.scene, this.world, this.c, this.dir); fireAt = this.wreckScene.fire; smokeAt = this.wreckScene.smoke;
+      this.heli.group.visible = false; this.prepareWreck(); this.wreckScene.reveal(); this.wreckSmoke.active = true; this.wreckFire.active = true; this.wreckLight.intensity = 4;
     } else {
       const h = this.heli.group; h.position.copy(this.c).add(new THREE.Vector3(0, 0.1, 0));
       h.rotation.order = 'XYZ'; h.rotation.set(0.32, 0.9, 0.55); this.heli.rotor.rotation.set(0.25, 0.4, -0.18); this.heli.blur.visible = false; this.heli.tailBlur.visible = false;
       this.heli.body.position.y = 0.55; this.heli.group.visible = true;
+      const fp = new THREE.Vector3(this.c.x - 0.6, this.c.y + 1.2, this.c.z + 0.2), sp = new THREE.Vector3(this.c.x, this.c.y + 2.2, this.c.z);
+      this.wreckSmoke = new Emitter(this.scene, { count: 90, rate: 14, life: 7, speed: 2.4, spread: 0.7, size: 1.4, grow: 6, alpha: 0.5, color: 0x262626, drift: new THREE.Vector3(1.0, 0, 0.3) }); this.wreckSmoke.position.copy(sp);
+      this.wreckFire = new Emitter(this.scene, { count: 50, rate: 22, life: 0.8, speed: 1.6, spread: 0.5, size: 0.8, grow: 0.4, alpha: 0.8, color: 0xff7a1a, additive: true, drift: new THREE.Vector3(0, 0.8, 0) }); this.wreckFire.position.copy(fp);
+      this.wreckLight.position.copy(fp).add(new THREE.Vector3(0, 0.5, 0)); this.wreckLight.intensity = 4;
     }
-    const fp = fireAt || new THREE.Vector3(this.c.x - 0.6, this.c.y + 1.2, this.c.z + 0.2), sp = smokeAt || new THREE.Vector3(this.c.x, this.c.y + 2.2, this.c.z);
-    this.wreckSmoke = new Emitter(this.scene, { count: 90, rate: 14, life: 7, speed: 2.4, spread: 0.7, size: 1.4, grow: 6, alpha: 0.5, color: 0x262626, drift: new THREE.Vector3(1.0, 0, 0.3) });
-    this.wreckSmoke.position.copy(sp);
-    this.wreckFire = new Emitter(this.scene, { count: 50, rate: 22, life: 0.8, speed: 1.6, spread: 0.5, size: 0.8, grow: 0.4, alpha: 0.8, color: 0xff7a1a, additive: true, drift: new THREE.Vector3(0, 0, 0) });
-    this.wreckFire.position.copy(fp);
-    this.wreckLight = new THREE.PointLight(0xff7a30, 4, 18, 1.5); this.wreckLight.position.copy(fp).add(new THREE.Vector3(0, 0.5, 0)); this.scene.add(this.wreckLight);
   }
 
   // flight path: level cruise, then a failing, spinning descent that ends at the crash site
@@ -159,7 +175,7 @@ export class Intro {
       if (bt > 1.5) { this.ring.visible = false; if (bt > 4) this.blastT = -1; }
     }
     for (const e of [this.smoke, this.fire, this.sparks, this.leaves, this.blast, this.blastSmoke, this.fireball, this.core, this.debris, this.embers, this.dust, this.wreckSmoke, this.wreckFire]) if (e) e.update(dt);
-    if (this.wreckScene) this.wreckScene.update(this.t + performance.now() / 1000); if (this.wreckLight) this.wreckLight.intensity = 3.5 + Math.random() * 1.5;
+    if (this.wreckScene) this.wreckScene.update(this.t + performance.now() / 1000); if (this.wreckLight && this.crashed) this.wreckLight.intensity = 3.5 + Math.random() * 1.5;
     if (t >= T_END) { this.running = false; this.done = true; this.ui.title('', 0); this.ui.subtitle(''); }
   }
 }

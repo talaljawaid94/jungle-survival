@@ -80,7 +80,7 @@ async function build() {
   fx = new Effects(scene, world, audio); player.fx = fx;
   map = T('map', () => new MapSystem(world));
   await loadStep('Charting the map', 86);
-  intro = new Intro(scene, camera, world, audio, ui);
+  intro = new Intro(scene, camera, world, audio, ui); intro.renderer = renderer;
   await loadStep('Final touches', 94);
   post = new Post(renderer, scene, camera);
   gameplay = new Gameplay({ world, inv, stats, audio, animals, structures, ui, player, fx, getExplored: () => map.fraction() });
@@ -278,7 +278,10 @@ function step(dt, t) {
 }
 
 // grade + post parameters derived from time of day and player state
+let frameNo = 0;
 function renderFrame(dt, t) {
+  world.updateLOD(camera.position, scene.fog.density);
+  renderer.shadowMap.autoUpdate = false; sky.sun.shadow.needsUpdate = (frameNo++ & 1) === 0;      // sun shadows refresh every other frame: half the shadow cost, static shadows are unaffected
   if (!post) { renderer.render(scene, camera); return; }
   const d = sky.daylight, gold = sky.golden, n = sky.night;
   const tint = [1 + 0.07 * gold - 0.1 * n, 1 - 0.04 * gold - 0.05 * n, 1 - 0.1 * gold + 0.12 * n];

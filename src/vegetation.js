@@ -52,9 +52,9 @@ export function canopyGeo({ blobs, cards, size, seed, tone = 1 }) {
 // ------------------------------------------------------------------ trunks
 function nonIndexed(g) { const x = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(x.attributes)) if (!['position', 'normal', 'uv'].includes(k)) x.deleteAttribute(k); return x; }
 
-function limb(from, to, r0, r1, seg = 6, uvScale = 1) {
+function limb(from, to, r0, r1, seg = 6, uvScale = 1, radial = 7) {
   const d = to.clone().sub(from), len = d.length();
-  const g = new THREE.CylinderGeometry(r1, r0, len, 7, seg, true);
+  const g = new THREE.CylinderGeometry(r1, r0, len, radial, seg, true);
   g.translate(0, len / 2, 0);
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), d.normalize()));
   g.translate(from.x, from.y, from.z);
@@ -62,9 +62,9 @@ function limb(from, to, r0, r1, seg = 6, uvScale = 1) {
   return nonIndexed(g);
 }
 
-export function trunkGeo({ H, r0, r1, bend = 0.4, seed, branches = [] }) {
+export function trunkGeo({ H, r0, r1, bend = 0.4, seed, branches = [], lod = 0 }) {
   const rnd = mulberry32(seed), noise = new Noise(seed), parts = [];
-  const g = new THREE.CylinderGeometry(r1, r0, H, 10, 12, true); g.translate(0, H / 2, 0);
+  const g = new THREE.CylinderGeometry(r1, r0, H, lod ? 6 : 10, lod ? 5 : 12, true); g.translate(0, H / 2, 0);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const y = p.getY(i), t = y / H, x = p.getX(i), z = p.getZ(i), ang = Math.atan2(z, x);
@@ -75,13 +75,13 @@ export function trunkGeo({ H, r0, r1, bend = 0.4, seed, branches = [] }) {
   g.computeVertexNormals(); parts.push(nonIndexed(g));
   for (let i = 0; i < 5; i++) {   // buttress roots
     const a = (i / 5) * 6.283 + rnd(); const from = V3(Math.cos(a) * r0 * 0.6, 1.0, Math.sin(a) * r0 * 0.6), to = V3(Math.cos(a) * (r0 + 0.55), -0.12, Math.sin(a) * (r0 + 0.55));
-    parts.push(limb(to, from, 0.34, 0.1, 2));
+    parts.push(limb(to, from, 0.34, 0.1, lod ? 1 : 2, 1, lod ? 4 : 7));
   }
-  for (const b of branches) parts.push(limb(b.from, b.to, b.r0, b.r1, 3));
+  for (const b of branches) parts.push(limb(b.from, b.to, b.r0, b.r1, lod ? 1 : 3, 1, lod ? 4 : 7));
   return mergeGeometries(parts, false);
 }
 
-export function jungleTree(seed, kind = 'tall') {
+export function jungleTree(seed, kind = 'tall', lod = 0) {
   const rnd = mulberry32(seed);
   const H = kind === 'fruit' ? 6.5 : kind === 'tall' ? 12 + rnd() * 3 : 8.5 + rnd() * 2;
   const blobs = [], branches = [];
@@ -92,8 +92,9 @@ export function jungleTree(seed, kind = 'tall') {
     blobs.push({ c: V3(Math.cos(a) * rad, y, Math.sin(a) * rad), r });
     if (i > 0) branches.push({ from: V3(0, H * (0.62 + rnd() * 0.2), 0), to: V3(Math.cos(a) * rad * 0.8, y - 0.8, Math.sin(a) * rad * 0.8), r0: 0.2, r1: 0.07 });
   }
-  const trunk = trunkGeo({ H, r0: kind === 'fruit' ? 0.4 : 0.52, r1: 0.2, seed, branches, bend: 0.35 });
-  const foliage = canopyGeo({ blobs, cards: kind === 'fruit' ? 30 : 40, size: kind === 'fruit' ? [2.2, 3.4] : [2.8, 4.4], seed: seed + 5 });
+  const trunk = trunkGeo({ H, r0: kind === 'fruit' ? 0.4 : 0.52, r1: 0.2, seed, branches, bend: 0.35, lod });
+  const k = lod ? 0.4 : 1, sz = lod ? 1.45 : 1;       // distant LOD: fewer, larger leaf cards
+  const foliage = canopyGeo({ blobs, cards: Math.round((kind === 'fruit' ? 30 : 40) * k), size: (kind === 'fruit' ? [2.2, 3.4] : [2.8, 4.4]).map((x) => x * sz), seed: seed + 5 });
   let extra = null;
   if (kind === 'fruit') {
     const parts = [];

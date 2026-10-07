@@ -21,7 +21,7 @@ function groundPatch(world, cx, cz, yaw, w, l, tex, y0, seg = 28, order = 2) {
   const mesh = new THREE.Mesh(g, m); mesh.receiveShadow = true; mesh.renderOrder = order; mesh.frustumCulled = false; return mesh;
 }
 
-export function buildWreckScene(scene, world, c, dir) {
+export function buildWreckScene(scene, world, c, dir, deferred = false) {
   const root = new THREE.Group(); root.name = 'wreckScene'; const yaw = Math.atan2(dir.x, dir.z);
   // --- burn patch under the body and a gouge running back along the approach path
   // charred ground: ragged edge, black char with grey ash, radial blast streaks and glowing embers in the cracks (separate emissive map)
@@ -90,7 +90,7 @@ export function buildWreckScene(scene, world, c, dir) {
   const charM = new THREE.MeshStandardMaterial({ color: 0x1c1612, roughness: 1 }), splM = new THREE.MeshStandardMaterial({ color: 0x8a6a40, roughness: 0.9 });
   const doomed = []; world.itemsNear(c.x, c.z, 11, (o) => { if (o.kind === 'tree') doomed.push(o); });
   for (const o of doomed) {
-    const dx = o.x - c.x, dz = o.z - c.z, d = Math.hypot(dx, dz) || 1, sc = o.scale || 1; world.removeItem(o, true);
+    const dx = o.x - c.x, dz = o.z - c.z, d = Math.hypot(dx, dz) || 1, sc = o.scale || 1;
     const y = world.heightAt(o.x, o.z), s = new THREE.Mesh(new THREE.CylinderGeometry(0.3 * sc, 0.5 * sc, 0.9 + rnd() * 2.4, 9), charM); s.position.set(o.x, y + 0.6, o.z); s.castShadow = true; root.add(s);        // charred stump
     for (let k = 0; k < 4; k++) { const fl = new THREE.Mesh(new THREE.ConeGeometry(0.12 * sc, 0.9 * sc, 5), charM), fa = rnd() * 6.28 + k * 1.57; fl.position.set(o.x + Math.cos(fa) * 0.42 * sc, y + 0.12, o.z + Math.sin(fa) * 0.42 * sc); fl.rotation.set(Math.sin(fa) * 1.1, 0, -Math.cos(fa) * 1.1); root.add(fl); }       // splayed roots
     const cap = new THREE.Mesh(new THREE.ConeGeometry(0.28 * sc, 0.8, 7), splM); cap.position.set(o.x, y + 1.5 + rnd(), o.z); cap.rotation.set((rnd() - 0.5) * 0.4, 0, (rnd() - 0.5) * 0.4); root.add(cap);
@@ -100,11 +100,26 @@ export function buildWreckScene(scene, world, c, dir) {
       const tip = new THREE.Vector3(o.x + Math.sin(a) * len, 0, o.z + Math.cos(a) * len); g.position.y = Math.max(y, world.heightAt(tip.x, tip.z)) + 0.28; g.rotation.z = (world.heightAt(tip.x, tip.z) - y) / len * 0.0;
     }
   }
-  world.blastDamage(c.x, c.z);
-  scene.add(root);
+  scene.add(root); root.visible = false;
+  // the felled trees, scorching and wreck all appear in one cheap step, so everything heavy can be built before the crash
+  let revealed = false;
+  const reveal = () => { if (revealed) return; revealed = true; for (const o of doomed) world.removeItem(o, true); world.blastDamage(c.x, c.z); root.visible = true; };
+  // compile every program the crash needs (colour pass and shadow pass) and upload its textures while nothing is on screen
+  const warm = (renderer, camera, extra = []) => {
+    const objs = [root, ...extra], saved = [];
+    for (const r of objs) r.traverse((o) => { saved.push([o, o.visible, o.frustumCulled]); o.frustumCulled = false; });
+    for (const r of objs) r.visible = true;
+    root.traverse((o) => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const k of ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'bumpMap']) if (m[k]) renderer.initTexture(m[k]); });
+    const sun = []; scene.traverse((o) => { if (o.isDirectionalLight && o.castShadow) sun.push(o); });
+    renderer.shadowMap.needsUpdate = true; for (const s of sun) s.shadow.needsUpdate = true;
+    renderer.render(scene, camera);
+    for (const [o, v, f] of saved) { o.visible = v; o.frustumCulled = f; }
+    if (revealed) root.visible = true;
+  };
   // body centre for fire and smoke
   const body = model.getObjectByName('WreckBody'); const bc = new THREE.Vector3(); if (body) new THREE.Box3().setFromObject(body).getCenter(bc); else bc.set(c.x, c.y + 1, c.z);
   const top = new THREE.Box3().setFromObject(body || model).max.y;
   const upd = (t) => { for (let i = 0; i < burnMats.length; i++) burnMats[i].emissiveIntensity = 0.9 + 0.5 * Math.sin(t * 2.3 + i * 1.7) * Math.sin(t * 5.1 + i) + 0.3 * Math.random(); };
-  return { update: upd, root, fire: new THREE.Vector3(bc.x, bc.y + 0.3, bc.z), smoke: new THREE.Vector3(bc.x, top, bc.z), dispose: () => { world.clearBlast(); scene.remove(root); root.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); } };
+  if (!deferred) reveal();
+  return { update: upd, reveal, warm, root, fire: new THREE.Vector3(bc.x, bc.y + 0.3, bc.z), smoke: new THREE.Vector3(bc.x, top, bc.z), dispose: () => { world.clearBlast(); scene.remove(root); root.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); } };
 }
