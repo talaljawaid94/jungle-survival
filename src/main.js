@@ -127,7 +127,7 @@ function resetAll() {
   G.time = 15.7; G.day = 1; G.paused = false; G.modal = null; deadT = 0;
   player.dead = false; player.flareT = 0; player.sleeping = false; player.setEquipped(null); ui.invDirty = true;
   const c = world.crash; player.teleport(c.x - 3.5, c.y, c.z + 6);
-  if (intro.wreckSmoke) { intro.wreckSmoke.dispose(scene); intro.wreckSmoke = null; intro.wreckFire.dispose(scene); intro.wreckFire = null; scene.remove(intro.wreckLight); intro.wreckLight = null; }
+  if (intro.wreckSmoke) { intro.wreckSmoke.dispose(scene); intro.wreckSmoke = null; intro.wreckFire.dispose(scene); intro.wreckFire = null; intro.wreckLight.intensity = 0; }      // the wreck light is permanent (adding a light mid-game recompiles every shader)
   intro.removeWreckScene(); intro.heli.group.visible = false; intro.crashed = false; intro.heli.group.rotation.set(0, 0, 0); intro.heli.body.position.y = 0; intro.heli.rotor.rotation.set(0, 0, 0);
   map.eg.fill(0); map.seen = 0; map.expl.getContext('2d').clearRect(0, 0, 300, 300);
   ui.hideDead(); ui.showPause(false); ui.fade(0); ui.closePanel();

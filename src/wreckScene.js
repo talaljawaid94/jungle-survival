@@ -72,14 +72,35 @@ export function buildWreckScene(scene, world, c, dir, deferred = false) {
     piece.getWorldPosition(pos); piece.position.y += world.heightAt(pos.x, pos.z) - 0; piece.updateMatrixWorld(true);
   }
   model.position.y = 0;
+  for (const piece of model.children) {                                                                                  // the torn-off door must not overlap a crate
+    if (!/Door/.test(piece.name)) continue;
+    piece.getWorldPosition(pos);
+    for (const cr of world.crates || []) {
+      const dx = pos.x - cr.x, dz = pos.z - cr.z, d = Math.hypot(dx, dz);
+      if (d < 2.4) { const k = (2.4 - d) / (d || 1), wp = new THREE.Vector3(pos.x + dx * k, 0, pos.z + dz * k); wp.y = pos.y + world.heightAt(wp.x, wp.z) - world.heightAt(pos.x, pos.z); piece.position.copy(model.worldToLocal(wp)); piece.updateMatrixWorld(true); piece.getWorldPosition(pos); }
+    }
+    piece.updateMatrixWorld(true);
+    let low = 9; const vv = new THREE.Vector3();                                                                       // rest it on the ground: lower it until its lowest point just touches the terrain
+    piece.traverse((o) => { if (!o.isMesh) return; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { vv.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); low = Math.min(low, vv.y - world.heightAt(vv.x, vv.z)); } });
+    piece.position.y -= low - 0.015; piece.updateMatrixWorld(true);
+  }
 
   // --- shards of metal and glass strewn along the gouge
-  const shard = new THREE.BoxGeometry(1, 0.03, 1), mats = [0xb9bec2, 0xd9dde0, 0x8b1212, 0x2a2d30].map((col) => new THREE.MeshStandardMaterial({ color: col, roughness: 0.5, metalness: 0.6 }));
+  // each kind of shard is an irregular torn piece (jagged outline, crumpled), not a neat rectangle
+  const mkShard = (seed) => {
+    let sd = seed; const r = () => ((sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296), n = 6 + Math.floor(r() * 3), sh = new THREE.Shape();
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + (r() - 0.5) * 0.5, rad = 0.35 + r() * 0.65, x = Math.cos(a) * rad * (0.6 + r() * 0.6), y = Math.sin(a) * rad; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false }); g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + Math.sin(p.getX(i) * 5 + seed) * 0.05 * Math.abs(p.getZ(i)) + (p.getX(i) + p.getZ(i)) * 0.08);   // crumple and curl
+    g.computeVertexNormals(); return g;
+  };
+  const shardGeo = [mkShard(3), mkShard(11), mkShard(23), mkShard(37)];
+  const mats = [0x8f9396, 0xb0b3b5, 0x6e1212, 0x2a2d30].map((col) => new THREE.MeshStandardMaterial({ color: col, roughness: 0.55, metalness: 0.55, side: THREE.DoubleSide }));
   for (let k = 0; k < mats.length; k++) {
-    const im = new THREE.InstancedMesh(shard, mats[k], 14), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+    const im = new THREE.InstancedMesh(shardGeo[k], mats[k], 14), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
     for (let i = 0; i < 14; i++) {
       const along = rnd() * 20 - 4, side = (rnd() - 0.5) * 9; p.set(c.x + back.x * along + back.z * side, 0, c.z + back.z * along - back.x * side); p.y = world.heightAt(p.x, p.z) + 0.05;
-      e.set((rnd() - 0.5) * 0.5, rnd() * 6.28, (rnd() - 0.5) * 0.5); q.setFromEuler(e); const sz = 0.12 + rnd() * 0.5; s.set(sz, 1, sz * (0.4 + rnd())); m.compose(p, q, s); im.setMatrixAt(i, m);
+      e.set((rnd() - 0.5) * 0.5, rnd() * 6.28, (rnd() - 0.5) * 0.5); q.setFromEuler(e); const sz = 0.10 + rnd() * 0.32; s.set(sz, 1, sz * (0.5 + rnd() * 0.8)); m.compose(p, q, s); im.setMatrixAt(i, m);
     }
     im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; root.add(im);
   }

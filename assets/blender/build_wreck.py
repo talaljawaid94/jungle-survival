@@ -42,6 +42,80 @@ def bend_object(o, axis_len, amount, axis='y'):
     for v in me.vertices:
         t = (v.co.y if axis == 'y' else v.co.x) / axis_len; v.co.z += amount * t * t
 
+
+def _sstep(a, b, x):
+    t = max(0.0, min(1.0, (x - a) / (b - a))); return t * t * (3 - 2 * t)
+
+def make_door(mats):
+    """A torn-off helicopter door: curved painted skin with a window opening, ragged torn hinge side, a folded corner, rubber window seal,
+    inner frame beams, handle, hinges and a few glass fragments. About 1.35 m wide, 1.2 m tall; local x = width, y = thickness, z = height."""
+    W, H, nx, nz = 1.35, 1.2, 72, 64
+    hole = lambda x, z: (abs((x + 0.09) / 0.43) ** 4 + abs((z - 0.27) / 0.245) ** 4) < 1.0
+    bm = bmesh.new(); V = [[None] * (nz + 1) for _ in range(nx + 1)]
+    for i in range(nx + 1):
+        for j in range(nz + 1):
+            x = (i / nx - 0.5) * W; z = (j / nz - 0.5) * H
+            y = -0.055 * (1 - (x / 0.675) ** 2) * (0.55 + 0.45 * (1 - (z / 0.6) ** 2))                      # outward bulge, like the fuselage skin
+            y += 0.20 * _sstep(0.40, 0.675, x) * (0.4 + 0.6 * (mnoise.noise(Vector((x * 3, z * 3, 1))) + 0.5))   # torn hinge side curls back
+            y -= 0.16 * _sstep(-0.35, -0.67, x) * _sstep(-0.15, -0.6, z)                                        # folded lower-left corner
+            y += 0.018 * mnoise.noise(Vector((x * 5, z * 5, 7)))                                                # dents
+            V[i][j] = bm.verts.new((x, y, z))
+    for i in range(nx):
+        for j in range(nz):
+            cx = ((i + 0.5) / nx - 0.5) * W; cz = ((j + 0.5) / nz - 0.5) * H
+            if hole(cx, cz): continue
+            if cx > 0.46 and (mnoise.noise(Vector((cx * 7, cz * 7, 3))) * 0.5 + 0.5) < _sstep(0.46, 0.675, cx) * 0.95: continue      # ragged tear
+            if cz < -0.5 and cx > -0.1 and (mnoise.noise(Vector((cx * 9, cz * 9, 9))) * 0.5 + 0.5) < 0.30: continue                     # bitten lower edge
+            bm.faces.new((V[i][j], V[i + 1][j], V[i + 1][j + 1], V[i][j + 1]))
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    me = bpy.data.meshes.new('DoorSkin'); bm.to_mesh(me); bm.free(); skin = bpy.data.objects.new('DoorSkin', me); bpy.context.scene.collection.objects.link(skin)
+    bpy.context.view_layer.objects.active = skin; skin.select_set(True)
+    md = skin.modifiers.new('Solid', 'SOLIDIFY'); md.thickness = 0.008; md.offset = 0.0; bpy.ops.object.modifier_apply(modifier='Solid')
+    for p in me.polygons: p.use_smooth = True
+    col = me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
+    for i, v in enumerate(me.vertices):
+        x, y, z = v.co; outer = v.normal.y < 0.0
+        if outer:
+            c = Vector((0.86, 0.87, 0.88))
+            if -0.30 < z < -0.12: c = Vector((0.58, 0.07, 0.06))                                                 # the red stripe from the fuselage
+            if -0.285 < z < -0.275 or -0.125 < z < -0.115: c = Vector((0.90, 0.90, 0.9))
+        else: c = Vector((0.40, 0.41, 0.43))                                                                      # raw grey inner lining
+        soot = _sstep(-0.1, 0.5, mnoise.noise(Vector((x * 2.2, z * 2.2, 4))) + 0.45) * 0.62 + _sstep(-0.25, -0.6, z) * 0.45 + _sstep(0.35, 0.67, x) * 0.5      # fire damage
+        c = c.lerp(Vector((0.05, 0.045, 0.04)), min(0.92, soot))
+        if x > 0.5 and (mnoise.noise(Vector((x * 11, z * 11, 2))) * 0.5 + 0.5) > 0.55: c = Vector((0.52, 0.53, 0.55))   # bare metal at the tear
+        c = c * (1 + 0.08 * mnoise.noise(Vector((x * 30, z * 30, y * 30))))
+        for k in range(3): c[k] = max(0.0, min(1.0, c[k]))
+        col.data[i].color = (c[0] ** 2.2, c[1] ** 2.2, c[2] ** 2.2, 1)
+    skin.data.materials.append(mats['paint'])
+    parts = [skin]
+    def box(name, size, loc, mat, rot=(0, 0, 0)):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=loc); o = bpy.context.active_object; o.name = name; o.scale = size; o.rotation_euler = rot; bpy.ops.object.transform_apply(scale=True, rotation=True)
+        bm2 = bmesh.new(); bm2.from_mesh(o.data); bmesh.ops.bevel(bm2, geom=bm2.edges[:], offset=min(size) * 0.25, segments=1); bm2.to_mesh(o.data); bm2.free()
+        o.data.materials.append(mats[mat]); parts.append(o); return o
+    # window seal: a rubber loop round the opening, a little proud of the skin
+    pts = []
+    for k in range(40):
+        a = k / 40 * math.tau; ca, sa = math.cos(a), math.sin(a)
+        x = -0.09 + 0.43 * math.copysign(abs(ca) ** 0.5, ca); z = 0.27 + 0.245 * math.copysign(abs(sa) ** 0.5, sa)
+        pts.append((x, -0.055 * (1 - (x / 0.675) ** 2) * (0.55 + 0.45 * (1 - (z / 0.6) ** 2)) - 0.004, z))
+    seal = tapered_tube('DoorSeal', pts + [pts[0]], [0.011] * 41, segs=6, subdiv_each=1, color_fn=lambda t: (0.04, 0.04, 0.045)); seal.data.materials.append(mats['dark']); parts.append(seal)
+    # inner frame beams and a diagonal brace, bent like the rest
+    box('BeamTop', (1.22, 0.035, 0.045), (-0.02, 0.040, 0.565), 'metal', (0, 0, 0.02)); box('BeamBot', (1.2, 0.035, 0.045), (-0.04, 0.035, -0.565), 'metal', (0, 0, -0.03))
+    box('BeamL', (0.045, 0.035, 1.12), (-0.64, 0.032, 0.0), 'metal'); box('BeamMid', (0.04, 0.03, 0.55), (0.37, 0.03, 0.28), 'metal', (0, 0, 0.0))
+    box('Brace', (0.03, 0.03, 0.8), (-0.35, 0.036, -0.3), 'metal', (0, math.radians(0), math.radians(52)))
+    # handle with its plate, and the hinge brackets (one snapped off)
+    box('DoorPlate', (0.07, 0.008, 0.2), (-0.56, -0.063, 0.0), 'dark'); box('DoorHandle', (0.12, 0.022, 0.025), (-0.56, -0.078, 0.04), 'metal')
+    box('Hinge1', (0.06, 0.035, 0.14), (0.62, 0.02, 0.40), 'metal'); box('Hinge2', (0.05, 0.03, 0.08), (0.60, 0.05, -0.38), 'metal', (0.4, 0.2, 0.5))
+    # glass left in the corners of the window
+    for k, (cx, cz, sz, rot) in enumerate(((-0.46, 0.45, 0.13, 0.4), (0.24, 0.12, 0.10, 2.2), (-0.40, 0.08, 0.08, 4.0))):
+        bm3 = bmesh.new(); vs = [bm3.verts.new((cx + math.cos(rot + a_) * sz * r_, -0.04, cz + math.sin(rot + a_) * sz * r_)) for a_, r_ in ((0, 1.0), (2.1, 0.7), (4.3, 1.2))]
+        bm3.faces.new(vs); bmesh.ops.recalc_face_normals(bm3, faces=bm3.faces); me3 = bpy.data.meshes.new('GlassShard'); bm3.to_mesh(me3); bm3.free()
+        g3 = bpy.data.objects.new('GlassShard', me3); bpy.context.scene.collection.objects.link(g3); g3.data.materials.append(mats['glass']); parts.append(g3)
+    for o in bpy.data.objects: o.select_set(False)
+    for o in parts: o.select_set(True)
+    bpy.context.view_layer.objects.active = skin; bpy.ops.object.join(); skin.name = 'WreckDoor'
+    return skin
+
 def build_wreck_all(export_path=None):
     exec(open("/Users/talaljawaid/Documents/Talal's Folder/Claude/Experiment 2026/Experiment 3/AI Game/assets/blender/build_heli.py").read(), globals())
     exec(open("/Users/talaljawaid/Documents/Talal's Folder/Claude/Experiment 2026/Experiment 3/AI Game/assets/blender/heli_details.py").read(), globals())
@@ -83,11 +157,8 @@ def build_wreck_all(export_path=None):
     G['BladeB'] = _grp('WreckBladeB', [bl[1]], (0, 0, 0)); G['BladeB'].location = (3.8, -2.6, 0.0); G['BladeB'].rotation_euler = Euler((0.05, -0.1, math.radians(-70)), 'XYZ'); _drop(G['BladeB'], 0.02)
     G['Hub'] = _grp('WreckHub', [rotorparts[2]], (0, 0, 0)); G['Hub'].location = (-1.6, 1.8, 0); _drop(G['Hub'], 0.0)
     # torn-off door, seat and a duffel bag
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0)); door = bpy.context.active_object; door.name = 'WreckDoor'; door.scale = (1.35, 0.03, 1.2); bpy.ops.object.transform_apply(scale=True)
-    bm = bmesh.new(); bm.from_mesh(door.data); bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.02, segments=2); bm.to_mesh(door.data); bm.free(); door.data.materials.append(mats['paint'])
-    vc = door.data.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
-    for i, v in enumerate(door.data.vertices): d = 0.62 + 0.3 * mnoise.noise(Vector((v.co.x * 1.5, 0, v.co.z * 1.5))); d = d * (0.25 if v.co.x > 0.2 else 1); vc.data[i].color = ((d * 0.95) ** 2.2, (d * 0.97) ** 2.2, d ** 2.2, 1)
-    G['Door'] = _grp('WreckDoor', [door], (0, 0, 0)); G['Door'].location = (-3.2, -5.2, 0); G['Door'].rotation_euler = Euler((0.08, 0.12, math.radians(40)), 'XYZ'); _drop(G['Door'], 0.02)
+    door = make_door(mats)
+    G['Door'] = _grp('WreckDoor', [door], (0, 0, 0)); G['Door'].location = (-3.2, -5.2, 0); G['Door'].rotation_euler = Euler((math.radians(-87), 0.025, math.radians(40)), 'XYZ'); _drop(G['Door'], 0.02)
     bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0)); seat = bpy.context.active_object; seat.name = 'WreckSeat'; seat.scale = (0.5, 0.5, 0.12); bpy.ops.object.transform_apply(scale=True)
     bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0.26, 0.32)); back = bpy.context.active_object; back.scale = (0.5, 0.1, 0.6); bpy.ops.object.transform_apply(scale=True)
     for o in (seat, back): o.data.materials.append(mats['dark'])
