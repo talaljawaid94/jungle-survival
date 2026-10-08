@@ -23,10 +23,12 @@ export class MapSystem {
       const x = -SIZE / 2 + (px + 0.5) * k, z = -SIZE / 2 + (py + 0.5) * k, h = w.heightAt(x, z);
       let r, g, b;
       if (h < 0) {
-        if (w.isFresh(x, z)) { r = 70; g = 170; b = 195; } else { const t = clamp(-h / 6, 0, 1); r = 40 - 30 * t; g = 120 - 80 * t; b = 150 - 70 * t; }
-      } else if (h < 2) { r = 214; g = 196; b = 140; }
-      else if (h > 30) { r = 140; g = 134; b = 124; }
-      else { const t = clamp((h - 2) / 26, 0, 1); r = 40 + 40 * t; g = 105 + 30 * t; b = 48 + 22 * t; }
+        if (w.isFresh(x, z)) { const t = clamp(-h / 3, 0, 1); r = 96 - 40 * t; g = 214 - 50 * t; b = 214 - 30 * t; }                      // lakes: bright turquoise
+        else { const t = clamp(-h / 7, 0, 1); r = 52 - 40 * t; g = 176 - 100 * t; b = 192 - 70 * t; }                                     // sea: turquoise shallows fading to deep blue
+      } else if (h < 0.6) { r = 246; g = 244; b = 226; }                                                                                  // surf line
+      else if (h < 2.4) { r = 236; g = 214; b = 150; }                                                                                    // sand
+      else if (h > 30) { r = 150; g = 146; b = 134; }
+      else { const t = clamp((h - 2.4) / 26, 0, 1); r = 104 - 44 * t; g = 168 - 40 * t; b = 74 - 14 * t; }                               // jungle: light grass to deep canopy
       const sh = 1 + clamp((w.heightAt(x + 5, z + 5) - w.heightAt(x - 5, z - 5)) * -0.05, -0.3, 0.3);
       const i = (py * S + px) * 4; img.data[i] = clamp(r * sh, 0, 255); img.data[i + 1] = clamp(g * sh, 0, 255); img.data[i + 2] = clamp(b * sh, 0, 255); img.data[i + 3] = 255;
     }
@@ -65,16 +67,23 @@ export class MapSystem {
     ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, W - 2, H - 2);
   }
 
-  drawMini(canvas, player, structures, crash) {
-    const sz = canvas.width, ctx = canvas.getContext('2d'), view = 190, s = sz / view;
+  drawMini(canvas, player, structures, crash, objTarget) {
+    const sz = canvas.width, ctx = canvas.getContext('2d'), view = 190, s = sz / view, rot = player.yaw + Math.PI;
     ctx.save(); ctx.clearRect(0, 0, sz, sz); ctx.beginPath(); ctx.arc(sz / 2, sz / 2, sz / 2, 0, 6.283); ctx.clip();
-    ctx.fillStyle = '#0a1a22'; ctx.fillRect(0, 0, sz, sz);
-    ctx.translate(sz / 2, sz / 2); ctx.rotate(player.yaw + Math.PI);
+    ctx.fillStyle = '#0b3a52'; ctx.fillRect(0, 0, sz, sz);
+    ctx.translate(sz / 2, sz / 2); ctx.rotate(rot);
     ctx.drawImage(this.base, -(player.pos.x + SIZE / 2) * s, -(player.pos.z + SIZE / 2) * s, SIZE * s, SIZE * s);
-    const mk = (x, z, txt) => { ctx.save(); ctx.translate((x - player.pos.x) * s, (z - player.pos.z) * s); ctx.rotate(-(player.yaw + Math.PI)); ctx.font = '13px system-ui'; ctx.textAlign = 'center'; ctx.fillText(txt, 0, 5); ctx.restore(); };
-    mk(crash.x, crash.z, '✕'); for (const f of structures.fires) mk(f.x, f.z, '🔥'); for (const sh of structures.shelters) mk(sh.x, sh.z, '⛺');
+    const mk = (x, z, fn) => { ctx.save(); ctx.translate((x - player.pos.x) * s, (z - player.pos.z) * s); ctx.rotate(-rot); fn(); ctx.restore(); };
+    const dot = (col, r) => () => { ctx.fillStyle = col; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill(); ctx.stroke(); };
+    mk(crash.x, crash.z, () => { ctx.strokeStyle = '#ff4d4d'; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(5, 5); ctx.moveTo(5, -5); ctx.lineTo(-5, 5); ctx.stroke(); });
+    for (const f of structures.fires) mk(f.x, f.z, dot('#ffb040', 5)); for (const sh of structures.shelters) mk(sh.x, sh.z, dot('#8fd45a', 5));
+    if (objTarget) {                                    // the objective: a gold pin, pinned to the rim of the map when it is out of view
+      let dx = (objTarget.x - player.pos.x) * s, dz = (objTarget.z - player.pos.z) * s; const d = Math.hypot(dx, dz), lim = sz / 2 - 11; if (d > lim) { dx *= lim / d; dz *= lim / d; }
+      ctx.save(); ctx.translate(dx, dz); ctx.rotate(-rot); ctx.fillStyle = '#ffd54a'; ctx.strokeStyle = '#6b3f06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -4, 6, Math.PI * 0.82, Math.PI * 2.18); ctx.lineTo(0, 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#6b3f06'; ctx.beginPath(); ctx.arc(0, -4, 2, 0, 6.283); ctx.fill(); ctx.restore();
+    }
     ctx.restore();
-    ctx.save(); ctx.translate(sz / 2, sz / 2); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(6, 7); ctx.lineTo(0, 3); ctx.lineTo(-6, 7); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore();
+    const g = ctx.createRadialGradient(sz / 2, sz / 2, sz * 0.4, sz / 2, sz / 2, sz / 2); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,20,30,0.45)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sz / 2, sz / 2, sz / 2, 0, 6.283); ctx.fill();
+    ctx.save(); ctx.translate(sz / 2, sz / 2);                                                                                                  // you: an orange arrow with a white outline
+    ctx.fillStyle = '#ff8a2a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.6; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 9); ctx.lineTo(0, 4.5); ctx.lineTo(-8, 9); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore();
   }
 }

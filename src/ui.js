@@ -10,18 +10,43 @@ const saveSettings = (s) => { try { localStorage.setItem('js-settings', JSON.str
 const TEMPLATE = `
 <div id="hud" class="hidden">
   <div id="compass"><canvas width="1040" height="92"></canvas></div>
-  <div id="objective" class="glass"><div class="row"><span class="pip"></span><span class="label">Objective</span></div><div id="objText"></div><div id="objSteps"></div></div>
-  <div id="topright">
-    <div id="miniWrap"><canvas id="minimap" width="190" height="190"></canvas><span id="miniN">N</span></div>
-    <div id="clock" class="glass"><span id="clockIc"></span><div class="when"><b id="clockTime"></b><span id="clockDay"></span></div></div>
-    <button id="muteBtn" class="glass" title="Mute / unmute sound (K)"></button>
+  <div id="pcard">
+    <div id="avatar"><svg class="arc" viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="54"/><circle class="fg" id="hpArc" cx="60" cy="60" r="54" stroke-dasharray="339.3" stroke-dashoffset="0"/></svg><div class="face"><img src="/ui/avatar.png" alt="" draggable="false"></div><span id="dayBadge">Day 1</span></div>
+    <div id="pstats" class="gpanel">
+      <div class="vital big" data-k="health"><div class="vi">${icon('heart', 20)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
+      <div class="minis">
+        <div class="vital mini" data-k="hunger"><div class="vi">${icon('food', 16)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
+        <div class="vital mini" data-k="thirst"><div class="vi">${icon('drop', 16)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
+        <div class="vital mini" data-k="energy"><div class="vi">${icon('bolt', 16)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
+      </div>
+      <div id="status"></div>
+    </div>
   </div>
-  <div id="vitals" class="glass">
-    <div class="vital" data-k="health"><div class="vi">${icon('heart', 20)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
-    <div class="vital" data-k="hunger"><div class="vi">${icon('food', 20)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
-    <div class="vital" data-k="thirst"><div class="vi">${icon('drop', 20)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
-    <div class="vital" data-k="energy"><div class="vi">${icon('bolt', 20)}</div><div class="vbar"><div class="trail"></div><div class="fill"></div></div><div class="vv"></div></div>
-    <div id="status"></div>
+  <div id="objective" class="gpill">
+    <span class="pin">${icon('pin', 20)}</span>
+    <div class="otx"><span id="objText"></span><div id="objSteps"></div></div>
+    <div id="objGo" class="hidden"><span id="objDist"></span><svg id="objArrow" viewBox="0 0 24 24"><path d="M12 2.500l7.500 18-7.500-4.500-7.500 4.500z"/></svg></div>
+  </div>
+  <div id="topright">
+    <div id="mapCol">
+      <div id="miniWrap"><canvas id="minimap" width="190" height="190"></canvas><span id="miniN">N</span><span id="miniM">M</span></div>
+      <div id="place" class="gpanel">
+        <div class="pn"><span class="gi">${icon('compass', 16)}</span><b id="placeName">Jungle</b></div>
+        <div class="pt"><span id="clockIc"></span><b id="clockTime"></b><span id="clockDay"></span></div>
+        <div class="pp"><span class="gi">${icon('gauge', 18)}</span><b id="paceNum">0</b><small>km/h</small><em id="paceMode">Standing</em></div>
+      </div>
+    </div>
+    <div id="sideBtns">
+      <button class="rbtn" id="btnHudPause" title="Pause (Esc)">${icon('pause', 20)}</button>
+      <button class="rbtn" id="btnPhoto" title="Photo (P)">${icon('camera', 20)}</button>
+      <button class="rbtn" id="btnHudSettings" title="Settings">${icon('cog', 21)}</button>
+      <button class="rbtn" id="muteBtn" title="Sound (K)"></button>
+    </div>
+  </div>
+  <div id="actions">
+    <div class="abtn" id="aSprint"><div class="ring"><span class="ai">${icon('run', 30)}</span></div><b>Sprint</b><kbd>Shift</kbd></div>
+    <div class="abtn" id="aUse"><div class="ring"><svg class="prog" viewBox="0 0 72 72"><circle class="fg" cx="36" cy="36" r="32" stroke-dasharray="201" stroke-dashoffset="201"/></svg><span class="ai">${icon('hand', 30)}</span></div><b id="aUseLbl">Interact</b><kbd>E</kbd></div>
+    <div class="abtn" id="aAtk"><div class="ring"><span class="ai">${icon('fist', 30)}</span></div><b id="aAtkLbl">Attack</b><kbd>Click</kbd></div>
   </div>
   <div id="itemLabel"></div>
   <div id="hotbar"></div>
@@ -55,7 +80,7 @@ const TEMPLATE = `
   <div class="legend"><span><i style="background:#ff5b5b"></i>Crash site</span><span><i style="background:#ffb347"></i>Campfire</span><span><i style="background:#fff"></i>You</span><span><i style="background:#4aaac3"></i>Fresh water</span><span style="margin-left:auto">Explore to reveal the island</span></div>
 </div>
 <div id="settings" class="sheet hidden">
-  <header><h2>${icon('gear', 24)} Settings</h2><button class="xbtn" data-close>${icon('close', 18)}</button></header>
+  <header><h2>${icon('cog', 24)} Settings</h2><button class="xbtn" data-close>${icon('close', 18)}</button></header>
   <div class="set" id="setBody"></div>
 </div>
 <div id="menu" class="screen hidden">
@@ -64,21 +89,32 @@ const TEMPLATE = `
     <p>Your helicopter went down over an uncharted island. Find water, build fire, hunt, shelter from the night, and stay alive until help finds you.</p>
     <button id="btnContinue" class="mbtn hidden">${icon('compass', 22)} Continue</button>
     <button id="btnNew" class="mbtn primary">${icon('campfire', 22)} New game</button>
-    <button id="btnSettings" class="mbtn">${icon('gear', 22)} Settings</button>
+    <button id="btnSettings" class="mbtn">${icon('cog', 22)} Settings</button>
   </div>
   <div class="ver">FIRST PREVIEW · v0.3</div>
 </div>
-<div id="pause" class="screen hidden"><h1>PAUSED</h1>
-  <button id="btnResume" class="mbtn primary">${icon('arrow_up', 22)} Resume</button>
-  <button id="btnPSettings" class="mbtn">${icon('gear', 22)} Settings</button>
-  <button id="btnSave" class="mbtn">${icon('check', 22)} Save game</button>
-  <button id="btnQuit" class="mbtn">${icon('close', 22)} Quit to menu</button>
+<div id="pause" class="screen hidden">
+  <div class="pbox gpanel2">
+    <div class="pavatar"><img src="/ui/avatar.png" alt="" draggable="false"></div>
+    <h1>PAUSED</h1>
+    <div class="psub" id="pauseSub">Day 1</div>
+    <div class="pstat" id="pauseStats"></div>
+    <button id="btnResume" class="mbtn primary">${icon('arrow_up', 22)} Resume</button>
+    <button id="btnPSettings" class="mbtn">${icon('cog', 22)} Settings</button>
+    <button id="btnSave" class="mbtn">${icon('check', 22)} Save game</button>
+    <button id="btnQuit" class="mbtn">${icon('close', 22)} Quit to menu</button>
+    <div class="pfoot"><kbd>Esc</kbd> Resume &nbsp; <kbd>P</kbd> Photo &nbsp; <kbd>K</kbd> Sound</div>
+  </div>
 </div>
-<div id="dead" class="screen hidden"><div class="skull">${icon('skull', 54)}</div><h1>YOU DID NOT SURVIVE</h1><p id="deadCause"></p>
-  <div class="deadStats"><div><b id="deadDay">1</b><span>Days survived</span></div></div>
-  <button id="btnRetry" class="mbtn primary">${icon('campfire', 22)} Try again</button>
-  <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
+<div id="dead" class="screen hidden">
+  <div class="pbox gpanel2 deadbox">
+    <div class="skull">${icon('skull', 46)}</div><h1>YOU DID NOT SURVIVE</h1><p id="deadCause"></p>
+    <div class="deadStats"><div><b id="deadDay">1</b><span>Days survived</span></div></div>
+    <button id="btnRetry" class="mbtn primary">${icon('campfire', 22)} Try again</button>
+    <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
+  </div>
 </div>
+<div id="skipHint"><kbd>Space</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
 
@@ -122,6 +158,7 @@ export class UI {
     $('hintBtn').onclick = () => this.toggleHints();
     if (CUSTOM_ICON_COUNT) { const v = this.$('menu').querySelector('.ver'); if (v) v.innerHTML += ' · ICONS FROM <a href="https://www.flaticon.com" target="_blank" rel="noopener" style="color:inherit">FLATICON</a>'; }
     this.$('muteBtn').onclick = () => this.setSetting('muted', !this.settings.muted); this.updateMuteBtn();
+    $('btnHudPause').onclick = () => this.on.pause && this.on.pause(); $('btnHudSettings').onclick = () => this.on.openSettings && this.on.openSettings(); $('btnPhoto').onclick = () => this.on.photo && this.on.photo();
     this.hintsOn = this.settings.hints; this.$('hints').classList.toggle('off', !this.hintsOn);
   }
 
@@ -132,7 +169,15 @@ export class UI {
   showMenu(hasSave) { this.$('menu').classList.remove('hidden'); this.$('btnContinue').classList.toggle('hidden', !hasSave); this.hud.classList.add('hidden'); }
   hideMenu() { this.$('menu').classList.add('hidden'); }
   showHud(on) { this.hud.classList.toggle('hidden', !on); }
-  showPause(on) { this.$('pause').classList.toggle('hidden', !on); }
+  showPause(on) {
+    this.$('pause').classList.toggle('hidden', !on);
+    if (on && this.lastStats) {
+      const s = this.lastStats, row = (ic, c, v) => `<span style="--c:${c}">${icon(ic, 18)}<b>${Math.round(Math.max(0, v))}%</b></span>`;
+      this.$('pauseSub').textContent = `Day ${G.day}`;
+      this.$('pauseStats').innerHTML = row('heart', '#ff6f61', s.health) + row('food', '#f6a844', s.hunger) + row('drop', '#5cc4f4', s.thirst) + row('bolt', '#f4d84e', s.energy);
+    }
+  }
+  showSkip(on) { this.$('skipHint').classList.toggle('on', !!on); }
   showDead(day, cause) { this.$('dead').classList.remove('hidden'); this.$('deadDay').textContent = day; this.$('deadCause').textContent = cause; }
   hideDead() { this.$('dead').classList.add('hidden'); }
   openPanel(name) {
@@ -294,7 +339,7 @@ export class UI {
 
   // ---------------------------------------------------------------- per frame
   update(dt, c) {
-    const { stats, inv, player } = c; this.lastInv = inv;
+    const { stats, inv, player } = c; this.lastInv = inv; this.lastStats = stats;
     for (const k of ['health', 'hunger', 'thirst', 'energy']) {
       const v = Math.max(0, stats[k]), b = this.vitals[k];
       b.fill.style.width = v + '%'; if (v < b.last - 0.05) b.trail.style.width = b.last + '%'; else b.trail.style.width = v + '%';
@@ -302,6 +347,29 @@ export class UI {
       if (v < b.last - 0.05) setTimeout(() => { b.trail.style.width = Math.max(0, stats[k]) + '%'; }, 60);
       b.last = v; b.el.classList.toggle('low', v < 22);
     }
+    // health ring around the avatar, day badge
+    const hp = Math.max(0, Math.min(100, stats.health)), arc = this.$('hpArc'); arc.style.strokeDashoffset = 339.3 * (1 - hp / 100); arc.parentNode.parentNode.dataset.hp = hp < 25 ? 'crit' : hp < 55 ? 'warn' : 'ok';
+    if (this.lastDay !== G.day) { this.lastDay = G.day; this.$('dayBadge').textContent = 'Day ' + G.day; }
+    // where you are, and how fast
+    if (c.place !== this.lastPlace) { this.lastPlace = c.place; this.$('placeName').textContent = c.place || ''; }
+    const spd = player.speed || 0, mode = player.swimming ? 'Swimming' : player.sprinting ? 'Sprinting' : spd > 0.6 ? 'Moving' : 'Standing', kmh = Math.round(spd * 3.6);
+    if (this.lastKmh !== kmh) { this.lastKmh = kmh; this.$('paceNum').textContent = kmh; } if (this.lastMode !== mode) { this.lastMode = mode; this.$('paceMode').textContent = mode; }
+    // objective distance and a pointer that turns with you
+    const og = this.$('objGo'), ot = c.objTarget;
+    if (!ot) { if (!og.classList.contains('hidden')) og.classList.add('hidden'); } else {
+      og.classList.remove('hidden'); const dx = ot.x - player.pos.x, dz = ot.z - player.pos.z, d = Math.hypot(dx, dz), fw = (dx * Math.sin(player.yaw) + dz * Math.cos(player.yaw)) / (d || 1), rt = (-dx * Math.cos(player.yaw) + dz * Math.sin(player.yaw)) / (d || 1);
+      const ds = d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m'; if (ds !== this.lastDist) { this.lastDist = ds; this.$('objDist').textContent = ds; }
+      this.$('objArrow').style.transform = `rotate(${(Math.atan2(rt, fw) * 180 / Math.PI).toFixed(0)}deg)`;
+    }
+    // action buttons: lit when the action is available
+    const aS = this.$('aSprint'), aU = this.$('aUse'), aA = this.$('aAtk'), tg = c.target;
+    aS.classList.toggle('on', !!player.sprinting); aS.classList.toggle('dim', stats.energy < 5);
+    const useKey = tg ? (tg.blocked ? 'x' : tg.label) + '|' + (tg.icon || '') : '';
+    if (useKey !== this.lastUseKey) { this.lastUseKey = useKey; aU.classList.toggle('ready', !!tg && !tg.blocked); aU.querySelector('.ai').innerHTML = icon(tg && tg.icon ? tg.icon : 'hand', 30); this.$('aUseLbl').textContent = tg && !tg.blocked ? tg.label.split(' ')[0] : 'Interact'; }
+    aU.querySelector('.fg').style.strokeDashoffset = 201 * (1 - Math.min(1, c.prog || 0));
+    const eq = inv.equipped && ITEMS[inv.equipped].kind === 'tool' ? inv.equipped : null, eqKey = (eq || '') + '|' + (c.atkCd > 0 ? 1 : 0);
+    if (eqKey !== this.lastAtkKey) { this.lastAtkKey = eqKey; aA.querySelector('.ai').innerHTML = icon(eq || 'fist', 30); this.$('aAtkLbl').textContent = eq ? ITEMS[eq].name : 'Attack'; aA.classList.toggle('on', !!eq); }
+    aA.classList.toggle('dim', c.atkCd > 0);
     const sig = JSON.stringify(inv.slots) + inv.selected;
     if (this.invDirty || sig !== this.lastSig) { this.invDirty = false; this.lastSig = sig; this.renderHotbar(inv); if (G.modal === 'inventory') this.renderInv(inv); if (G.modal === 'craft') this.renderCraft(inv); }
     if (inv.selected !== this.lastSel) {

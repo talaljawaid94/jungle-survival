@@ -29,9 +29,9 @@ const OBJECTIVES = [
 export class Gameplay {
   constructor(o) {
     Object.assign(this, o);
-    this.flags = {}; this.objIdx = 0; this.busy = null; this.atkCd = 0; this.sleepSeq = null; this.target = null; this.objTimer = 0; this.chopTick = 0;
+    this.flags = {}; this.objIdx = 0; this.busy = null; this.useAct = null; this.atkCd = 0; this.sleepSeq = null; this.target = null; this.objTimer = 0; this.chopTick = 0;
   }
-  reset() { this.flags = {}; this.objIdx = 0; this.busy = null; this.sleepSeq = null; }
+  reset() { this.flags = {}; this.objIdx = 0; this.busy = null; this.useAct = null; this.sleepSeq = null; }
 
   toast(m) { this.ui.toast(m); }
   give(id, n = 1) {
@@ -76,14 +76,14 @@ export class Gameplay {
           break;
         }
         case 'tree':
-          if (tool && tool.chop > 0) consider('i' + o.id, o.x, o.z, 2.6, 'Chop tree', Math.max(2.2, 3.2 / tool.chop), () => { this.give('log', 3); this.give('stick', 2); this.fx.fallTree(o, p.pos.x, p.pos.z); w.removeItem(o); }, { tick: () => { this.audio.chop(); this.player.char.attack(); this.fx.chips(o.x + (p.pos.x - o.x) * 0.4, o.y + 1.1, o.z + (p.pos.z - o.z) * 0.4); this.fx.shake(0.04); } });
+          if (tool && tool.chop > 0) consider('i' + o.id, o.x, o.z, 2.6, 'Chop tree', Math.max(2.2, 3.2 / tool.chop), () => { this.give('log', 3); this.give('stick', 2); this.fx.fallTree(o, p.pos.x, p.pos.z); w.removeItem(o); }, { act: 'chop', every: 0.8, tick: () => { this.audio.chop(); this.player.char.attack(); this.fx.chips(o.x + (p.pos.x - o.x) * 0.4, o.y + 1.1, o.z + (p.pos.z - o.z) * 0.4); this.fx.shake(0.04); } });
           else consider('t' + o.id, o.x, o.z, 2.6, 'Chopping needs an axe or knife (equip it)', 0, null);
           break;
         case 'crate':
-          if (!o.data.opened) consider('i' + o.id, o.x, o.z, 2.8, 'Open supply crate', 1.2, () => {
+          if (!o.data.opened) consider('i' + o.id, o.x, o.z, 2.8, 'Open supply crate', 1.9, () => {
             for (const [id, n] of Object.entries(LOOT[o.data.loot])) this.give(id, n);
             w.openCrate(o); this.flags.crate = true; this.audio.pickup();
-          });
+          }, { act: 'crate', obj: o });
           break;
       }
     });
@@ -91,9 +91,9 @@ export class Gameplay {
     const corpse = this.animals.nearestCorpse(p.pos.x, p.pos.z, 3.0); this._k = 'corpse';
     if (corpse) consider('c' + corpse.x.toFixed(1), corpse.x, corpse.z, 3.0, `Butcher ${corpse.sp.name}`, tool ? 2.4 : 5, () => {
       this.give('raw_meat', corpse.sp.meat); corpse.butchered = true; this.fx.bloodSplash(corpse.x, corpse.y + 0.35, corpse.z, 30); this.fx.puff(corpse.x, corpse.y + 0.4, corpse.z, 8, 0.8); this.animals.remove(corpse); this.audio.chop();
-    }, { tick: () => {
+    }, { act: 'butcher', tick: () => {
       this.audio.chop(); const b = this.busy; if (b) corpse.g.scale.setScalar(Math.max(0.4, 1 - 0.6 * (b.t / b.dur)));       // the carcass shrinks as it is cut up
-      this.fx.bloodSplash(corpse.x + (Math.random() - 0.5) * 0.5, corpse.y + 0.3, corpse.z + (Math.random() - 0.5) * 0.5, 10); this.player.char.attack();
+      this.fx.bloodSplash(corpse.x + (Math.random() - 0.5) * 0.5, corpse.y + 0.3, corpse.z + (Math.random() - 0.5) * 0.5, 10);
     } });
     // campfires
     const fire = this.structures.nearestFire(p.pos.x, p.pos.z, 3.2); this._k = 'fire';
@@ -148,15 +148,19 @@ export class Gameplay {
       if (!ctl.down('KeyE') || !t || t.key !== this.busy.key) this.cancelBusy();
       else {
         this.busy.t += dt; this.ui.setProgress(this.busy.t / this.busy.dur); this.player.gathering = true;
-        this.busy.tickT = (this.busy.tickT || 0) + dt; if (this.busy.tick && this.busy.tickT > 0.55) { this.busy.tickT = 0; this.busy.tick(); }
-        if (this.busy.t >= this.busy.dur) { const b = this.busy; this.busy = null; this.player.gathering = false; this.ui.setProgress(null); b.perform(); this.afterInvChange(); }
+        const bz = this.busy; this.player.act = { kind: bz.act || 'pick', t: bz.t, u: Math.min(1, bz.t / bz.dur), x: bz.pos.x, z: bz.pos.z }; if (bz.act === 'crate') this.crateLid(bz.obj, bz.t / bz.dur);
+        this.busy.tickT = (this.busy.tickT || 0) + dt; if (this.busy.tick && this.busy.tickT > (this.busy.every || 0.55)) { this.busy.tickT = 0; this.busy.tick(); }
+        if (this.busy.t >= this.busy.dur) { const b = this.busy; this.busy = null; this.player.gathering = false; this.player.act = null; this.ui.setProgress(null); b.perform(); this.afterInvChange(); }
       }
     } else {
-      this.player.gathering = false;
+      this.player.gathering = false; this.player.act = null;
       if (t && ctl.hit('KeyE') && t.perform) {
         if (t.dur <= 0.01) { t.perform(); this.afterInvChange(); } else this.busy = { ...t, t: 0 };
       }
     }
+    // item-use animation (drink / eat / bandage): the effect lands partway through
+    if (this.useAct) { const ua = this.useAct; ua.t += dt; if (!ua.applied && ua.t >= ua.dur * 0.6) { ua.applied = true; this.finishUse(ua); } if (ua.t >= ua.dur) this.useAct = null; }
+    if (!this.busy) this.player.act = this.useAct ? { kind: this.useAct.kind, t: this.useAct.t, u: Math.min(1, this.useAct.t / this.useAct.dur), x: 0, z: 0 } : null;
     this.ui.setPrompt(t ? (t.perform ? `[E] ${t.label}${t.dur > 0.4 ? ' (hold)' : ''}` : t.label) : null);
 
     if (ctl.mousePressed) this.attack();
@@ -165,7 +169,27 @@ export class Gameplay {
     if (this.objTimer <= 0) { this.objTimer = 0.7; this.checkObjectives(); }
   }
 
-  cancelBusy() { if (this.busy) { this.busy = null; this.ui.setProgress(null); } this.player.gathering = false; }
+  // the crate lid lifts and tilts while the survivor works at it, and drops back if they let go
+  crateLid(o, u) {
+    const lid = o && o.obj3d && o.obj3d.userData.lid; if (!lid || o.data.opened) return;
+    const ease = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const jiggle = ease(0.28, 0.5, u) * (1 - ease(0.5, 0.6, u)) * Math.sin(u * 60) * 0.012, lift = ease(0.5, 0.95, u);
+    lid.position.set(0, o.obj3d.userData.lidY + jiggle + 0.2 * lift, 0.18 * lift); lid.rotation.set(-0.5 * lift, 0, 0);
+  }
+  // where the current objective points (for the distance and arrow in the HUD), or null when it is not a place
+  objectiveTarget() {
+    const p = this.player.pos, near = (list) => { let best = null, bd = 1e9; for (const o of list) { const d = Math.hypot(o.x - p.x, o.z - p.z); if (d < bd) { bd = d; best = o; } } return best; };
+    switch (this.objIdx) {
+      case 0: return near(this.world.crates.filter((c) => !c.data.opened));
+      case 1: { let best = null, bd = 1e9; for (const l of this.world.lakes) { const d = Math.hypot(l.x - p.x, l.z - p.z); if (d < bd) { bd = d; best = l; } } return best; }
+      case 5: case 6: return near([...this.structures.fires, ...(this.objIdx === 6 ? this.structures.shelters : [])]);
+      default: return null;
+    }
+  }
+  cancelBusy() {
+    if (this.busy) { const b = this.busy; if (b.act === 'crate' && b.obj && !b.obj.data.opened) { const lid = b.obj.obj3d.userData.lid; if (lid) { lid.position.set(0, b.obj.obj3d.userData.lidY, 0); lid.rotation.set(0, 0, 0); } } this.busy = null; this.ui.setProgress(null); }
+    this.player.gathering = false; this.player.act = null; this.useAct = null;
+  }
   afterInvChange() { this.ui.invDirty = true; this.player.setEquipped(this.inv.equipped); }
   select(i) { this.inv.selected = i; this.afterInvChange(); this.audio.click(); }
 
@@ -192,8 +216,22 @@ export class Gameplay {
   }
 
   // ------------------------------------------------------------------ using items
+  // using food, water or medicine plays an animation first; the effect lands about 60% of the way through it
   useSlot(i) {
     const s = this.inv.slots[i]; if (!s) return; const d = ITEMS[s.id], st = this.stats;
+    if (this.useAct) return;
+    if (d.kind === 'med' || d.kind === 'food') {
+      if (d.kind === 'med' && st.health >= 99) return this.toast('You are already healthy');
+      const drink = d.kind === 'food' && d.thirst && !d.hunger;
+      this.useAct = { slot: i, id: s.id, kind: d.kind === 'med' ? 'bandage' : drink ? 'drink' : 'eat', t: 0, dur: drink ? 1.9 : d.kind === 'med' ? 1.7 : 1.5, applied: false }; return;
+    }
+    this.useNow(i, s, d, st);
+  }
+  finishUse(act) {
+    const i = act.slot, s = this.inv.slots[i]; if (!s || s.id !== act.id) return;                   // the item moved or was dropped meanwhile
+    this.useNow(i, s, ITEMS[s.id], this.stats);
+  }
+  useNow(i, s, d, st) {
     if (d.kind === 'med') {
       if (st.health >= 99) return this.toast('You are already healthy');
       st.heal(d.heal); this.inv.removeAt(i, 1); this.audio.pickup(); this.toast(`+${d.heal} health`);

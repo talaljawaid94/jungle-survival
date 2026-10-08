@@ -10,3 +10,6 @@ dist
 assets/blender/previews/
 assets/blender/tex/
 marketing/*.png
+
+# raw third-party motion capture source (Mixamo/three.js example); only the baked, retargeted result ships in public/models/hero_motion.json
+assets/mixamo/
