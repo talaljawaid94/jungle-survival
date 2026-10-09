@@ -402,3 +402,47 @@ img.ico { object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.55)); 
   .pbox .mbtn { width: 100%; max-width: 280px; padding: 7px 14px 8px; margin-bottom: 6px; font-size: 14.5px; } .pfoot { font-size: 11px; } .deadbox { padding-top: 24px; } #dead .skull { width: 54px; height: 54px; margin-bottom: 6px; }
 }
 @media (max-width: 480px) { #menu p { font-size: 14px; } #menu .logo { width: min(38vh, 72vw); } .mbtn { font-size: 16px; padding: 11px 16px 12px; } }
+
+/* ================= Touch controls ================= */
+html, body, #c { touch-action: none; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.touch .sheet, .touch .screen { touch-action: pan-y; } .touch .sheet .body, .touch #invGrid, .touch #craftList, .touch .set { -webkit-overflow-scrolling: touch; }
+.touch .abtn kbd, .touch #hints, .touch #hintBtn, .touch .pfoot, .touch .hintTxt, .touch #compass { display: none !important; }
+.touch #hud { --sa-l: env(safe-area-inset-left, 0px); --sa-r: env(safe-area-inset-right, 0px); --sa-b: env(safe-area-inset-bottom, 0px); --sa-t: env(safe-area-inset-top, 0px); }
+.touch #stick { position: absolute; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 5; }
+.touch #stick.on { opacity: 1; }
+.touch #stick .ring { position: absolute; left: -64px; top: -64px; width: 128px; height: 128px; border-radius: 50%; border: 3px solid rgba(242, 193, 78, 0.8); background: radial-gradient(circle, rgba(8, 40, 50, 0.28), rgba(8, 40, 50, 0.55)); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35), inset 0 0 18px rgba(0, 0, 0, 0.4); }
+.touch #stick .knob { position: absolute; left: 0; top: 0; width: 58px; height: 58px; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle at 35% 30%, #fff0b4, #f2c14e 60%, #c98f1d); border: 3px solid #8a5a0c; box-shadow: 0 5px 12px rgba(0, 0, 0, 0.5); }
+/* a faint stick ghost so people know where to put their thumb */
+.touch #hud::after { content: ''; position: absolute; left: calc(46px + var(--sa-l)); bottom: calc(46px + var(--sa-b)); width: 110px; height: 110px; border-radius: 50%; border: 3px dashed rgba(242, 193, 78, 0.35); background: rgba(8, 40, 50, 0.16); pointer-events: none; }
+.touch #actions { position: absolute; right: calc(16px + var(--sa-r)); bottom: calc(16px + var(--sa-b)); width: 250px; height: 214px; display: block; transform: none; gap: 0; }
+.touch .abtn { position: absolute; touch-action: none; pointer-events: auto; }
+.touch .abtn.held .ring { transform: scale(0.92); filter: brightness(1.25); }
+.touch .abtn .ring { width: 66px; height: 66px; transition: transform 0.08s; }
+.touch #aAtk { right: 0; bottom: 0; } .touch #aAtk .ring { width: 86px; height: 86px; }
+.touch #aUse { right: 100px; bottom: 6px; }
+.touch #aJump { right: 4px; bottom: 112px; } .touch #aSprint { right: 98px; bottom: 100px; }
+.touch #aSprint.latched .ring { border-color: #8ff0ff; box-shadow: 0 0 0 2.5px #2d7d8a, 0 0 20px rgba(120, 235, 255, 0.85), inset 0 3px 0 rgba(255, 255, 255, 0.3); }
+.touch .abtn b { display: none; } .touch #aUse b { display: block; position: absolute; top: -18px; font-size: 12px; background: rgba(7, 28, 35, 0.8); border-radius: 9px; padding: 1px 8px; }
+.touch #touchUtil { position: absolute; top: calc(8px + var(--sa-t)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 6; }
+.touch #touchUtil .rbtn { width: 42px; height: 42px; touch-action: none; }
+.touch #hotbar { bottom: calc(10px + var(--sa-b)); }
+.touch #marker .key { display: none; }
+.touch #crosshair { opacity: 0.7; }
+.touch .slot { pointer-events: auto; touch-action: none; }
+.touch #sideBtns .rbtn { width: 44px; height: 44px; }
+.touch .mbtn, .touch .xbtn { min-height: 44px; }
+.touch .row input[type=range] { height: 32px; }
+/* landscape phones: hotbar between the stick and the buttons */
+@media (max-height: 560px) {
+  .touch #actions { transform: scale(0.8); transform-origin: bottom right; right: calc(8px + var(--sa-r)); bottom: calc(8px + var(--sa-b)); }
+  .touch #hotbar { gap: 3px; bottom: calc(6px + var(--sa-b)); } .touch .slot { width: 36px; height: 36px; border-radius: 9px; } .touch .slot .k { display: none; } .touch #itemLabel { bottom: 48px; }
+  .touch #touchUtil { top: calc(6px + var(--sa-t)); gap: 6px; } .touch #touchUtil .rbtn { width: 36px; height: 36px; }
+  .touch #hud::after { left: calc(30px + var(--sa-l)); bottom: calc(24px + var(--sa-b)); width: 96px; height: 96px; }
+}
+/* portrait phones: buttons above the hotbar, utility row under the objective */
+@media (max-width: 600px) and (min-height: 561px) {
+  .touch #actions { transform: scale(0.82); transform-origin: bottom right; right: 4px; bottom: calc(66px + var(--sa-b)); }
+  .touch #touchUtil { top: 176px; left: 10px; transform: none; gap: 6px; } .touch #touchUtil .rbtn { width: 36px; height: 36px; }
+  .touch #hud::after { left: 24px; bottom: calc(96px + var(--sa-b)); }
+  .touch #hotbar { bottom: calc(8px + var(--sa-b)); }
+}

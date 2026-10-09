@@ -4,6 +4,7 @@ import { G, DAY_SECONDS } from './game.js';
 import { World, R } from './world.js';
 import { Sky } from './sky.js';
 import { Controls } from './controls.js';
+import { initTouch } from './touch.js';
 import { AudioEngine } from './audio.js';
 import { UI } from './ui.js';
 import { Player } from './player.js';
@@ -41,6 +42,7 @@ addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); ca
 
 const ui = new UI();
 const ctl = new Controls(canvas);
+initTouch(ctl, ui);
 const audio = new AudioEngine();
 const stats = new Stats();
 const inv = new Inventory();
@@ -101,7 +103,7 @@ async function build() {
   ui.on.close = () => { ui.closePanel(); if (G.state === 'play' && !G.paused) ctl.lock(); };
   ui.on.quit = () => { save(); location.reload(); };
   ui.on.setting = (k, v) => applySetting(k, v);
-  ui.on.pause = () => { if (G.state === 'play' && !G.paused) { G.paused = true; ui.showPause(true); ctl.unlock(); } };
+  ui.on.pause = () => { if (G.state === 'play' && !G.paused) { if (ctl.touchReset) ctl.touchReset(); G.paused = true; ui.showPause(true); ctl.unlock(); } };
   ui.on.openSettings = () => { if (G.state === 'play') { if (!G.paused) { G.paused = true; ui.showPause(true); } ctl.unlock(); ui.openPanel('settings'); } };
   ui.on.photo = () => { photoReq = true; ui.toast('Photo saved'); };
   for (const k of Object.keys(ui.settings)) applySetting(k, ui.settings[k]);
@@ -110,6 +112,7 @@ async function build() {
   document.addEventListener('pointerlockchange', () => {
     if (!document.pointerLockElement && (G.state === 'play' || G.state === 'intro') && !G.modal && !G.suppressPause) { G.paused = true; ui.showPause(true); }
   });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !G.paused && !G.modal) ui.on.pause(); });
   ui.showMenu(hasSave());
   await loadStep('Ready', 100); const ld = document.getElementById('loading'); if (ld) { ld.classList.add('out'); setTimeout(() => ld.remove(), 800); }
   if (import.meta.env.DEV || location.search.includes('debug')) window.game = { fx, post, G, world, player, stats, inv, animals, structures, gameplay, intro, sky, camera, ui, audio, map, scene, renderer, save, startNew, ctl, advance };
@@ -153,13 +156,13 @@ function resetAll() {
 function startNew() {
   audio.init(); audio.resume(); clearSave(); resetAll();
   ui.hideMenu(); ui.showHud(false); player.char.group.visible = false;
-  G.state = 'intro'; ctl.lock(); intro.start();
+  G.state = 'intro'; ctl.lock(); if (ctl.goFullscreen) ctl.goFullscreen(); intro.start();
 }
 
 function startContinue() {
   const d = readSave(); if (!d) return startNew();
   audio.init(); audio.resume(); resetAll();
-  ui.hideMenu(); ui.hideDead();
+  ui.hideMenu(); ui.hideDead(); if (ctl.goFullscreen) ctl.goFullscreen();
   intro.finishCrash(); intro.heli.group.visible = true;      // build the wreck site first so blast-felled trees are charred, not plain stumps
   try {
     G.time = d.time; G.day = d.day;
@@ -181,10 +184,11 @@ function beginPlay() {
   player.char.group.visible = true; player.startWake(); ui.showHud(true); G.state = 'play'; wakeFade = 3.2; ui.fade(1);
   gameplay.checkObjectives(); lastSave = performance.now();
   ui.toast('You wake beside the wreckage. Your head is pounding...');
+  if (ctl.touch && innerHeight > innerWidth) setTimeout(() => ui.toast('Tip: turn your phone sideways for a wider view'), 2500);
 }
 
 function resume() { G.paused = false; ui.showPause(false); ctl.lock(); audio.resume(); }
-function togglePanel(name) { if (G.modal === name) { ui.closePanel(); ctl.lock(); } else { ui.openPanel(name); ctl.unlock(); if (name === 'map') drawFullMap(); } }
+function togglePanel(name) { if (ctl.touchReset) ctl.touchReset(); if (G.modal === name) { ui.closePanel(); ctl.lock(); } else { ui.openPanel(name); ctl.unlock(); if (name === 'map') drawFullMap(); } }
 function drawFullMap() { map.drawFull(ui.mapCanvas, player, structures, world.crash); }
 
 function save() {
@@ -264,6 +268,7 @@ function step(dt, t) {
   if (!gameplay.sleepSeq || gameplay.sleepSeq.t < 1.4) G.time += (dt * 24) / DAY_SECONDS;
   while (G.time >= 24) { G.time -= 24; G.day++; }
 
+  if (ctl.touchTick) ctl.touchTick();
   player.update(dt, ctl, world, stats, audio, locked);
   gameplay.update(dt, ctl, locked);
   const resting = !player.moving && (structures.firesNear(player.pos.x, player.pos.z, 6) || structures.nearestShelter(player.pos.x, player.pos.z, 4)) && stats.energy < 100;

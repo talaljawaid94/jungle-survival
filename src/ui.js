@@ -2,9 +2,12 @@ import { ITEMS, RECIPES, CATS } from './items.js';
 import { icon, CUSTOM_ICON_COUNT } from './icons.js';
 import { G } from './game.js';
 import logoUrl from './assets/logo.png';
+import { isTouch } from './controls.js';
 
 export const DEFAULT_SETTINGS = { quality: 'high', volume: 0.85, sens: 1, invertY: false, fov: 62, hints: true, compass: true, muted: false };
-export function loadSettings() { try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('js-settings') || '{}') }; } catch (e) { return { ...DEFAULT_SETTINGS }; } }
+export function loadSettings() { try { return { ...DEFAULT_SETTINGS, ...(isTouch ? { quality: 'low' } : {}), ...JSON.parse(localStorage.getItem('js-settings') || '{}') }; } catch (e) { return { ...DEFAULT_SETTINGS }; } }
+// keyboard hints in copy become touch wording on phones
+const tx = (t) => (isTouch && typeof t === 'string' ? t.replace(/ \((E|C|Z)\)/g, '').replace('press Z to sleep', 'tap the moon to sleep').replace('You can sleep here (Z)', 'Tap the moon to sleep') : t);
 const saveSettings = (s) => { try { localStorage.setItem('js-settings', JSON.stringify(s)); } catch (e) {} };
 
 const TEMPLATE = `
@@ -114,7 +117,7 @@ const TEMPLATE = `
     <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
   </div>
 </div>
-<div id="skipHint"><kbd>Space</kbd><span>Skip intro</span></div>
+<div id="skipHint"><kbd>${isTouch ? 'Tap' : 'Space'}</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
 
@@ -193,7 +196,7 @@ export class UI {
   title(t) { this.$('title').textContent = t; }
   subtitle(t) { this.$('subtitle').textContent = t; }
   toast(msg) {
-    const d = document.createElement('div'); d.className = 'toast glass'; d.textContent = msg; this.toasts.appendChild(d);
+    const d = document.createElement('div'); d.className = 'toast glass'; d.textContent = tx(msg); this.toasts.appendChild(d);
     while (this.toasts.children.length > 3) this.toasts.firstChild.remove();
     setTimeout(() => d.remove(), 3500);
   }
@@ -210,12 +213,12 @@ export class UI {
     requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transform = `translate(${tx - x}px, ${ty - y}px) scale(0.55)`; el.style.opacity = '0.15'; }));
     setTimeout(() => el.remove(), 760);
   }
-  banner(text) { const b = this.$('banner'); this.$('bannerText').textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
+  banner(text) { const b = this.$('banner'); this.$('bannerText').textContent = tx(text); b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
   hitFrom(rel) { const a = document.createElement('div'); a.className = 'dmgArc'; a.style.transform = `rotate(${(-rel * 180) / Math.PI}deg)`; this.$('dmg').appendChild(a); setTimeout(() => a.remove(), 1400); }
   setPrompt(t) { this.lastPrompt = t; }
   setProgress() {}
   setObjective(t, idx = 0, total = 8) {
-    if (t === this.lastObj && idx === this.lastIdx) return; this.lastObj = t; this.lastIdx = idx; this.$('objText').textContent = t;
+    if (t === this.lastObj && idx === this.lastIdx) return; this.lastObj = t; this.lastIdx = idx; this.$('objText').textContent = tx(t);
     this.$('objSteps').innerHTML = Array.from({ length: total }, (_, i) => `<i class="${i < idx ? 'on' : i === idx ? 'cur' : ''}"></i>`).join('');
   }
   setTarget(t) {
@@ -226,8 +229,8 @@ export class UI {
     const sig = t.label + '|' + t.name + '|' + t.blocked + '|' + (t.icon || '');
     if (sig !== this.lastMarkerKey) {
       this.lastMarkerKey = sig; m.classList.toggle('blocked', !!t.blocked);
-      m.querySelector('.nm').textContent = t.name || ''; m.querySelector('.act').innerHTML = `${t.icon ? icon(t.icon, 18) : ''}<span>${t.label}</span>`;
-      m.querySelector('.key').style.visibility = t.blocked ? 'hidden' : 'visible';
+      m.querySelector('.nm').textContent = t.name || ''; m.querySelector('.act').innerHTML = `${t.icon ? icon(t.icon, 18) : ''}<span>${tx(t.label)}</span>`;
+      m.querySelector('.key').textContent = isTouch ? '' : 'E'; m.querySelector('.key').style.visibility = t.blocked ? 'hidden' : 'visible';
     }
     m.querySelector('.fg').style.strokeDashoffset = 163.4 * (1 - Math.min(1, t.prog || 0));
   }

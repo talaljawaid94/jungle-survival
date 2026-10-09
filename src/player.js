@@ -25,8 +25,9 @@ export class Player {
     if (!locked) { this.yaw -= ctl.mouseDX * 0.0022 * this.sens; this.pitch = clamp(this.pitch + ctl.mouseDY * 0.0022 * this.sens * (this.invertY ? -1 : 1), -0.45, 1.25); }
 
     const ableToMove = !locked && !this.dead && !this.sleeping && !this.gathering;
-    const fw = ableToMove ? (ctl.down('KeyW') ? 1 : 0) - (ctl.down('KeyS') ? 1 : 0) : 0;
-    const st = ableToMove ? (ctl.down('KeyD') ? 1 : 0) - (ctl.down('KeyA') ? 1 : 0) : 0;
+    const ax = ableToMove && ctl.axis && ctl.axis.m > 0.12 ? ctl.axis : null;
+    const fw = ax ? ax.y : ableToMove ? (ctl.down('KeyW') ? 1 : 0) - (ctl.down('KeyS') ? 1 : 0) : 0;
+    const st = ax ? ax.x : ableToMove ? (ctl.down('KeyD') ? 1 : 0) - (ctl.down('KeyA') ? 1 : 0) : 0;
     const f = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), r = new THREE.Vector3(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
     const mv = f.multiplyScalar(fw).add(r.multiplyScalar(st));
     this.moving = mv.lengthSq() > 0.01; if (this.moving) mv.normalize();
@@ -40,7 +41,7 @@ export class Player {
     if (stats.energy < 8) target *= 0.8; if (stats.sick > 0) target *= 0.88; if (stats.health < 20) target *= 0.85;
     const slope = world.slopeAt(this.pos.x, this.pos.z); if (slope > 0.55 && !this.swimming) target *= 0.8;
 
-    const dv = mv.multiplyScalar(this.moving ? target : 0);
+    const dv = mv.multiplyScalar(this.moving ? target * (ax ? 0.55 + 0.45 * Math.min(1, (ax.m - 0.12) / 0.6) : 1) : 0);
     const k = Math.min(1, dt * (this.moving ? 9 : 10));
     this.vel.x += (dv.x - this.vel.x) * k; this.vel.z += (dv.z - this.vel.z) * k;
     this.pos.x += this.vel.x * dt; this.pos.z += this.vel.z * dt;
