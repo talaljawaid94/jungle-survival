@@ -456,3 +456,6 @@ html, body, #c { touch-action: none; overscroll-behavior: none; -webkit-touch-ca
 .touch #capture { display: none !important; }
 body.nocursor #c { cursor: none; }
 .mhint { margin-top: 10px; max-width: 360px; text-align: center; font: 500 12.5px/1.45 var(--game); color: #b6d0d6; } .mhint kbd { font: 700 10.5px var(--game); padding: 1px 7px 2px; border-radius: 7px; background: #0c2c35; border: 1.5px solid var(--gold); color: #fff; }
+
+/* desktop: the cursor is captured while playing, so click-only buttons are hidden (Esc / P / K cover them) */
+html:not(.touch) #sideBtns { display: none; }

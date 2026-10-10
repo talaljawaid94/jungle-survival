@@ -62,7 +62,8 @@ const TEMPLATE = `
   <div id="hints" class="glass">
     <div><b>W</b><b>A</b><b>S</b><b>D</b> Move &nbsp; <b>Shift</b> Sprint &nbsp; <b>Space</b> Jump</div>
     <div><b>E</b> Hold to interact &nbsp; <b>Click</b> Attack &nbsp; <b>F</b> Use item</div>
-    <div><b>Tab</b> Bag &nbsp; <b>C</b> Craft &nbsp; <b>M</b> Map &nbsp; <b>Z</b> Sleep &nbsp; <b>H</b> Hide hints</div>
+    <div><b>Tab</b> Bag &nbsp; <b>C</b> Craft &nbsp; <b>M</b> Map &nbsp; <b>Z</b> Sleep &nbsp; <b>Esc</b> Pause</div>
+    <div><b>P</b> Photo &nbsp; <b>K</b> Sound &nbsp; <b>H</b> Hide hints</div>
   </div>
   <button id="hintBtn" class="glass"><b style="margin-right:6px">H</b> Controls</button>
 </div>
