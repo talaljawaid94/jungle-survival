@@ -118,8 +118,8 @@ const TEMPLATE = `
     <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
   </div>
 </div>
-<div id="capture" class="hidden"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><div><b>Click to take control</b><small>Captures your mouse so you can look around</small></div></div>
-<div id="mouseTip"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><span>Your mouse is captured: move it to look. Press <kbd>Esc</kbd> to get your cursor back.</span></div>
+<div id="capture" class="hidden"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><b>Click the game to capture your mouse</b></div>
+<div id="mouseTip"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><span id="mouseTipTx"></span></div>
 <div id="skipHint"><kbd>${isTouch ? 'Tap' : 'Space'}</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
@@ -184,8 +184,8 @@ export class UI {
     }
   }
   showCapture(on) { if (this._cap !== on) { this._cap = on; this.$('capture').classList.toggle('hidden', !on); } }
-  mouseTip() {
-    if (isTouch) return; let n = 0; try { n = +localStorage.getItem('js-mousetip') || 0; localStorage.setItem('js-mousetip', n + 1); } catch (e) {}
+  mouseTip(noLock) {
+    if (isTouch) return; this.$('mouseTipTx').innerHTML = noLock ? 'Drag with the mouse to look around, click to act. <kbd>Esc</kbd> pauses.' : 'Your mouse is captured: move it to look. Press <kbd>Esc</kbd> to get your cursor back.'; let n = 0; try { n = +localStorage.getItem('js-mousetip') || 0; localStorage.setItem('js-mousetip', n + 1); } catch (e) {}
     if (n >= 3) return; const el = this.$('mouseTip'); el.classList.add('on'); clearTimeout(this._mt); this._mt = setTimeout(() => el.classList.remove('on'), 8000);
   }
   showSkip(on) { this.$('skipHint').classList.toggle('on', !!on); }
