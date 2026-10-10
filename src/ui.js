@@ -93,7 +93,7 @@ const TEMPLATE = `
     <button id="btnContinue" class="mbtn hidden">${icon('compass', 22)} Continue</button>
     <button id="btnNew" class="mbtn primary">${icon('campfire', 22)} New game</button>
     <button id="btnSettings" class="mbtn">${icon('cog', 22)} Settings</button>
-    <div class="mhint">${isTouch ? 'Best in landscape · left thumb moves, right thumb looks' : 'The game captures your mouse to look around · press <kbd>Esc</kbd> any time to get your cursor back'}</div>
+    <div class="mhint">${isTouch ? 'Best in landscape · left thumb moves, right thumb looks' : 'Move the mouse to look around · press <kbd>Esc</kbd> any time to use your cursor'}</div>
   </div>
   <div class="ver">FIRST PREVIEW · v0.3</div>
 </div>
@@ -118,8 +118,7 @@ const TEMPLATE = `
     <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
   </div>
 </div>
-<div id="capture" class="hidden"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><b>Click the game to capture your mouse</b></div>
-<div id="mouseTip"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><span id="mouseTipTx"></span></div>
+<div id="capture" class="hidden"><kbd>Esc</kbd><span>Use mouse</span></div>
 <div id="skipHint"><kbd>${isTouch ? 'Tap' : 'Space'}</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
@@ -184,10 +183,6 @@ export class UI {
     }
   }
   showCapture(on) { if (this._cap !== on) { this._cap = on; this.$('capture').classList.toggle('hidden', !on); } }
-  mouseTip(noLock) {
-    if (isTouch) return; this.$('mouseTipTx').innerHTML = noLock ? 'Drag with the mouse to look around, click to act. <kbd>Esc</kbd> pauses.' : 'Your mouse is captured: move it to look. Press <kbd>Esc</kbd> to get your cursor back.'; let n = 0; try { n = +localStorage.getItem('js-mousetip') || 0; localStorage.setItem('js-mousetip', n + 1); } catch (e) {}
-    if (n >= 3) return; const el = this.$('mouseTip'); el.classList.add('on'); clearTimeout(this._mt); this._mt = setTimeout(() => el.classList.remove('on'), 8000);
-  }
   showSkip(on) { this.$('skipHint').classList.toggle('on', !!on); }
   showDead(day, cause) { this.$('dead').classList.remove('hidden'); this.$('deadDay').textContent = day; this.$('deadCause').textContent = cause; }
   hideDead() { this.$('dead').classList.add('hidden'); }

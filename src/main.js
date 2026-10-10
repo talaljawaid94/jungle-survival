@@ -258,12 +258,12 @@ function step(dt, t) {
   }
 
   // ---------- play
-  if (G.paused) { ui.showCapture(false); return; }
+  if (G.paused) { ui.showCapture(false); document.body.classList.remove('nocursor'); return; }
   ctl.wantLock = !G.modal && !gameplay.sleepSeq;
   if (!ctl.touch) {
-    const have = !!document.pointerLockElement;
-    if (!have && !ctl.noLock && !G.modal && !gameplay.sleepSeq) { if ((capT += dt) > 0.5) ui.showCapture(true); } else { capT = 0; ui.showCapture(false); }
-    if ((have || ctl.noLock) && !tipShown) { tipShown = true; ui.mouseTip(ctl.noLock); }
+    ui.showCapture(ctl.wantLock);
+    document.body.classList.toggle('nocursor', ctl.wantLock && ctl.noLock);
+    ctl.edgeTick(dt);
     if (ctl.noLock && ctl.hit('Escape') && !G.modal) { ui.on.pause(); return; }
   }
   if (ctl.hit('Tab')) togglePanel('inventory'); if (ctl.hit('KeyC')) togglePanel('craft'); if (ctl.hit('KeyM')) togglePanel('map');

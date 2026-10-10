@@ -23,29 +23,32 @@ export class Controls {
     });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
-    // noLock: the browser refused pointer lock (embedded/preview browsers), so drag-to-look replaces it: drag = look, click = act
-    this.noLock = !isTouch && !document.documentElement.requestPointerLock; this.everLocked = false; this.drag = null;
+    // noLock: the browser refused pointer lock (embedded/preview browsers), so plain mouse movement drives the camera (cursor hidden, edges keep turning)
+    this.noLock = !isTouch && !document.documentElement.requestPointerLock; this.everLocked = false; this.cx = 0; this.cy = 0;
     document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement) { this.everLocked = true; this.noLock = false; } });
     document.addEventListener('pointerlockerror', () => { if (!this.everLocked && !this.touch) this.noLock = true; });
     addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement) { this.mouseDX += e.movementX; this.mouseDY += e.movementY; }
-      else if (this.drag) { this.drag.d += Math.abs(e.movementX) + Math.abs(e.movementY); if (this.drag.d > 4) { this.mouseDX += e.movementX; this.mouseDY += e.movementY; } }
+      this.cx = e.clientX; this.cy = e.clientY;
+      if (document.pointerLockElement || (this.noLock && this.wantLock)) { this.mouseDX += e.movementX; this.mouseDY += e.movementY; }
     });
     addEventListener('mousedown', (e) => {
       if (e.button !== 0 || this.touch) return;
-      if (document.pointerLockElement) { this.mouseDown = true; this.mousePressed = true; }
-      else if (e.target === this.canvas && this.wantLock) { if (this.noLock) this.drag = { d: 0 }; else this.lock(); }
+      if (document.pointerLockElement || (this.noLock && this.wantLock && e.target === this.canvas)) { this.mouseDown = true; this.mousePressed = true; }
+      else if (e.target === this.canvas && this.wantLock) this.lock();
     });
-    addEventListener('mouseup', (e) => {
-      if (e.button !== 0) return; this.mouseDown = false;
-      if (this.drag) { if (this.drag.d <= 4) this.mousePressed = true; this.drag = null; }
-    });
+    addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
     addEventListener('contextmenu', (e) => e.preventDefault());
     this.canvas = canvas;
   }
   down(code) { return this.keys.has(code); }
   hit(code) { return this.pressed.has(code); }
   endFrame() { this.pressed.clear(); this.mouseDX = 0; this.mouseDY = 0; this.mousePressed = false; }
+  // without pointer lock the cursor stops at the screen edge, so holding it there keeps turning
+  edgeTick(dt) {
+    if (!(this.noLock && this.wantLock) || document.pointerLockElement) return; const m = 36;
+    const ex = this.cx < m ? -1 : this.cx > innerWidth - m ? 1 : 0, ey = this.cy < m ? -1 : this.cy > innerHeight - m ? 1 : 0;
+    this.mouseDX += ex * 700 * dt; this.mouseDY += ey * 500 * dt;
+  }
   press(code) { this.keys.add(code); this.pressed.add(code); }
   release(code) { this.keys.delete(code); }
   lock() { if (this.touch) return; try { const p = this.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { if (!this.everLocked) this.noLock = true; }); } catch (e) { if (!this.everLocked) this.noLock = true; } }
