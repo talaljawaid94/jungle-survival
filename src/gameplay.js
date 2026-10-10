@@ -10,7 +10,7 @@ const KIND_INFO = {
 };
 
 const LOOT = {
-  supplies: { knife: 1, flare: 2, canned_food: 2 },
+  supplies: { stone_axe: 1, flare: 2, canned_food: 2 },
   medical:  { first_aid: 2, bandage: 2, water_clean: 1 },
   food:     { canned_food: 2, water_clean: 2, bottle_empty: 1 },
 };
