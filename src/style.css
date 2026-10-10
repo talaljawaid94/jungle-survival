@@ -459,3 +459,8 @@ body.nocursor #c { cursor: none; }
 
 /* desktop: the cursor is captured while playing, so click-only buttons are hidden (Esc / P / K cover them) */
 html:not(.touch) #sideBtns { display: none; }
+#menu .col { margin-bottom: 34px; }
+/* narrow desktop windows / tablets: keep the hotbar clear of the action buttons and the Esc cue */
+@media (min-width: 601px) and (max-width: 1000px) and (min-height: 561px) {
+  #hotbar { gap: 4px; } .slot { width: max(30px, min(46px, calc((100vw - 450px) / 9 - 4px))); height: max(30px, min(46px, calc((100vw - 450px) / 9 - 4px))); }
+}

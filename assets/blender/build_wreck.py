@@ -111,6 +111,10 @@ def make_door(mats):
         bm3 = bmesh.new(); vs = [bm3.verts.new((cx + math.cos(rot + a_) * sz * r_, -0.04, cz + math.sin(rot + a_) * sz * r_)) for a_, r_ in ((0, 1.0), (2.1, 0.7), (4.3, 1.2))]
         bm3.faces.new(vs); bmesh.ops.recalc_face_normals(bm3, faces=bm3.faces); me3 = bpy.data.meshes.new('GlassShard'); bm3.to_mesh(me3); bm3.free()
         g3 = bpy.data.objects.new('GlassShard', me3); bpy.context.scene.collection.objects.link(g3); g3.data.materials.append(mats['glass']); parts.append(g3)
+    for o in parts:
+        if o is skin or o.type != 'MESH' or 'Col' in o.data.color_attributes: continue
+        ca = o.data.color_attributes.new('Col', 'BYTE_COLOR', 'POINT'); m0 = o.data.materials[0] if o.data.materials else None; t = tuple(m0.get('tint', (0.3, 0.3, 0.3))) if m0 is not None else (0.3, 0.3, 0.3)
+        for i in range(len(o.data.vertices)): ca.data[i].color = (t[0] ** 2.2, t[1] ** 2.2, t[2] ** 2.2, 1)
     for o in bpy.data.objects: o.select_set(False)
     for o in parts: o.select_set(True)
     bpy.context.view_layer.objects.active = skin; bpy.ops.object.join(); skin.name = 'WreckDoor'
