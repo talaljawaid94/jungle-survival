@@ -93,6 +93,7 @@ const TEMPLATE = `
     <button id="btnContinue" class="mbtn hidden">${icon('compass', 22)} Continue</button>
     <button id="btnNew" class="mbtn primary">${icon('campfire', 22)} New game</button>
     <button id="btnSettings" class="mbtn">${icon('cog', 22)} Settings</button>
+    <div class="mhint">${isTouch ? 'Best in landscape · left thumb moves, right thumb looks' : 'The game captures your mouse to look around · press <kbd>Esc</kbd> any time to get your cursor back'}</div>
   </div>
   <div class="ver">FIRST PREVIEW · v0.3</div>
 </div>
@@ -117,6 +118,8 @@ const TEMPLATE = `
     <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
   </div>
 </div>
+<div id="capture" class="hidden"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><div><b>Click to take control</b><small>Captures your mouse so you can look around</small></div></div>
+<div id="mouseTip"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7"/></svg><span>Your mouse is captured: move it to look. Press <kbd>Esc</kbd> to get your cursor back.</span></div>
 <div id="skipHint"><kbd>${isTouch ? 'Tap' : 'Space'}</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
@@ -161,7 +164,7 @@ export class UI {
     $('hintBtn').onclick = () => this.toggleHints();
     if (CUSTOM_ICON_COUNT) { const v = this.$('menu').querySelector('.ver'); if (v) v.innerHTML += ' · ICONS FROM <a href="https://www.flaticon.com" target="_blank" rel="noopener" style="color:inherit">FLATICON</a>'; }
     this.$('muteBtn').onclick = () => this.setSetting('muted', !this.settings.muted); this.updateMuteBtn();
-    $('btnHudPause').onclick = () => this.on.pause && this.on.pause(); $('btnHudSettings').onclick = () => this.on.openSettings && this.on.openSettings(); $('btnPhoto').onclick = () => this.on.photo && this.on.photo();
+    $('capture').onclick = () => this.on.capture && this.on.capture(); $('btnHudPause').onclick = () => this.on.pause && this.on.pause(); $('btnHudSettings').onclick = () => this.on.openSettings && this.on.openSettings(); $('btnPhoto').onclick = () => this.on.photo && this.on.photo();
     this.hintsOn = this.settings.hints; this.$('hints').classList.toggle('off', !this.hintsOn);
   }
 
@@ -179,6 +182,11 @@ export class UI {
       this.$('pauseSub').textContent = `Day ${G.day}`;
       this.$('pauseStats').innerHTML = row('heart', '#ff6f61', s.health) + row('food', '#f6a844', s.hunger) + row('drop', '#5cc4f4', s.thirst) + row('bolt', '#f4d84e', s.energy);
     }
+  }
+  showCapture(on) { if (this._cap !== on) { this._cap = on; this.$('capture').classList.toggle('hidden', !on); } }
+  mouseTip() {
+    if (isTouch) return; let n = 0; try { n = +localStorage.getItem('js-mousetip') || 0; localStorage.setItem('js-mousetip', n + 1); } catch (e) {}
+    if (n >= 3) return; const el = this.$('mouseTip'); el.classList.add('on'); clearTimeout(this._mt); this._mt = setTimeout(() => el.classList.remove('on'), 8000);
   }
   showSkip(on) { this.$('skipHint').classList.toggle('on', !!on); }
   showDead(day, cause) { this.$('dead').classList.remove('hidden'); this.$('deadDay').textContent = day; this.$('deadCause').textContent = cause; }

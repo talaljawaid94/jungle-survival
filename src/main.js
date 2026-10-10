@@ -47,7 +47,7 @@ const audio = new AudioEngine();
 const stats = new Stats();
 const inv = new Inventory();
 let world, sky, player, animals, structures, gameplay, intro, map, post, fx;
-let menuAngle = 0, lastSave = 0, deadT = 0, wakeFade = 0, mapTick = 0, miniTick = 0, shoreTimer = 0, revealT = 0, lastAttacker = '';
+let capT = 0, tipShown = false, menuAngle = 0, lastSave = 0, deadT = 0, wakeFade = 0, mapTick = 0, miniTick = 0, shoreTimer = 0, revealT = 0, lastAttacker = '';
 const audioCtx = { day: 1, night: 0, jungle: 1, water: 0, lake: 0, fire: 0, windy: 0, health: 100 };
 const clock = new THREE.Clock();
 const _v = new THREE.Vector3();
@@ -105,6 +105,7 @@ async function build() {
   ui.on.setting = (k, v) => applySetting(k, v);
   ui.on.pause = () => { if (G.state === 'play' && !G.paused) { if (ctl.touchReset) ctl.touchReset(); G.paused = true; ui.showPause(true); ctl.unlock(); } };
   ui.on.openSettings = () => { if (G.state === 'play') { if (!G.paused) { G.paused = true; ui.showPause(true); } ctl.unlock(); ui.openPanel('settings'); } };
+  ui.on.capture = () => ctl.lock();
   ui.on.photo = () => { photoReq = true; ui.toast('Photo saved'); };
   for (const k of Object.keys(ui.settings)) applySetting(k, ui.settings[k]);
   document.getElementById('compass').style.display = ui.settings.compass ? '' : 'none';
@@ -257,7 +258,8 @@ function step(dt, t) {
   }
 
   // ---------- play
-  if (G.paused) return;
+  if (G.paused) { ui.showCapture(false); return; }
+  if (!ctl.touch) { if (!document.pointerLockElement && !G.modal && !gameplay.sleepSeq) { if ((capT += dt) > 0.5) ui.showCapture(true); } else { capT = 0; ui.showCapture(false); } if (document.pointerLockElement && !tipShown) { tipShown = true; ui.mouseTip(); } }
   if (ctl.hit('Tab')) togglePanel('inventory'); if (ctl.hit('KeyC')) togglePanel('craft'); if (ctl.hit('KeyM')) togglePanel('map');
   if (ctl.hit('Escape') && G.modal) ui.requestClose();
   if (ctl.hit('KeyH')) ui.toggleHints();
