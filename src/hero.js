@@ -1,7 +1,16 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mulberry32, Noise, clamp } from './noise.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { hasHeroModel, createModelRig } from './heroModel.js';
+
+// Blender-built hand props (public/models/tools.glb): nodes `stone_axe` and `torch`, grip at the origin, working end along +Y. The procedural versions below are the fallback.
+let toolGLB = null;
+export async function loadToolModels(url) { toolGLB = (await new GLTFLoader().loadAsync(url)).scene; }
+function glbTool(name) {
+  const n = toolGLB && toolGLB.getObjectByName(name); if (!n) return null; const c = n.clone(true);
+  c.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; if (o.material) { const m = o.material, metal = m.metalness > 0.5; m.metalness = metal ? 0.3 : 0; m.roughness = metal ? 0.42 : Math.max(m.roughness, 0.8); m.color.setScalar(metal ? 1.35 : 2.0); m.needsUpdate = true; } } }); return c;
+}
 
 // ===================================================================== textures
 const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -308,12 +317,15 @@ function buildTools() {
   const tool = (name, fn) => { const g = grp(); g.visible = false; fn(g); T[name] = g; };
   const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.85, bumpMap: weaveBump(9, 'felt'), bumpScale: 1.5 }), stone = new THREE.MeshStandardMaterial({ color: 0x84847c, roughness: 0.95 });
   tool('knife', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.11, 10), M.leather, 0, -0.01, 0)); g.add(mesh(rbox(0.1, 0.012, 0.028, 0.004), M.gold, 0, 0.05, 0)); const b = mesh(new THREE.BoxGeometry(0.005, 0.17, 0.034), M.metal, 0, 0.14, 0); g.add(b); const tip = mesh(new THREE.ConeGeometry(0.017, 0.04, 4), M.metal, 0, 0.245, 0); tip.scale.set(0.3, 1, 1); g.add(tip); });
-  tool('stone_axe', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.017, 0.021, 0.7, 10), wood, 0, 0.14, 0)); const h = mesh(rbox(0.07, 0.15, 0.2, 0.025), stone, 0, 0.42, 0.06); h.rotation.z = 0.08; g.add(h); for (let i = 0; i < 4; i++) g.add(mesh(new THREE.TorusGeometry(0.022, 0.004, 5, 14), M.rope, 0, 0.375 + i * 0.01, 0, false)); });
+  tool('stone_axe', (g) => { const m = glbTool('stone_axe'); if (m) { g.add(m); return; } g.add(mesh(new THREE.CylinderGeometry(0.017, 0.021, 0.7, 10), wood, 0, 0.14, 0)); const h = mesh(rbox(0.07, 0.15, 0.2, 0.025), stone, 0, 0.42, 0.06); h.rotation.z = 0.08; g.add(h); for (let i = 0; i < 4; i++) g.add(mesh(new THREE.TorusGeometry(0.022, 0.004, 5, 14), M.rope, 0, 0.375 + i * 0.01, 0, false)); });
   tool('spear', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.016, 0.02, 2.0, 10), wood, 0, 0.45, 0)); g.add(mesh(new THREE.ConeGeometry(0.036, 0.22, 6), stone, 0, 1.55, 0)); for (let i = 0; i < 4; i++) g.add(mesh(new THREE.TorusGeometry(0.02, 0.004, 5, 14), M.rope, 0, 1.44 + i * 0.012, 0, false)); });
   tool('torch', (g) => {
-    g.add(mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.52, 10), wood, 0, 0.1, 0)); g.add(mesh(new THREE.CylinderGeometry(0.036, 0.026, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x1b1008, roughness: 1 }), 0, 0.4, 0));
-    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 10), new THREE.MeshBasicMaterial({ color: 0xff9a2a })); fl.position.y = 0.52; g.add(fl); g.userData.flame = fl;
-    const l = new THREE.PointLight(0xff9a40, 0, 30, 1.25); l.position.y = 0.55; g.add(l); g.userData.light = l;
+    const tm = glbTool('torch'); if (tm) g.add(tm); else g.add(mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.52, 10), wood, 0, 0.1, 0)); if (!tm) g.add(mesh(new THREE.CylinderGeometry(0.036, 0.026, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x1b1008, roughness: 1 }), 0, 0.4, 0));
+    // flame: three nested teardrops (white core, yellow, orange) so it reads as fire; the cloth head glows from below via emissive
+    const fl = new THREE.Group(); fl.position.y = tm ? 0.5 : 0.52; g.add(fl); g.userData.flame = fl;
+    for (const [r, h, c, y] of [[0.055, 0.24, 0xff7a18, 0.1], [0.04, 0.2, 0xffc23a, 0.09], [0.022, 0.14, 0xfff2b0, 0.07]]) { const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.92, depthWrite: false })); cone.position.y = y; fl.add(cone); }
+    if (tm) tm.traverse((o) => { if (o.isMesh && o.material) { o.material = o.material.clone(); o.material.emissive = new THREE.Color(0xff5a10); o.material.emissiveIntensity = 0; g.userData.glow = (g.userData.glow || []).concat(o.material); } });
+    const l = new THREE.PointLight(0xff9a40, 0, 30, 1.25); l.position.y = 0.6; g.add(l); g.userData.light = l;
   });
   tool('flare', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0xc01818, roughness: 0.5 }), 0, 0.05, 0)); const fl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff3a3a })); fl.position.y = 0.24; g.add(fl); g.userData.flame = fl; const l = new THREE.PointLight(0xff3030, 0, 55, 1.2); l.position.y = 0.3; g.add(l); g.userData.light = l; });
   tool('bottle', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.036, 0.038, 0.2, 14), new THREE.MeshPhysicalMaterial({ color: 0x4aa8d8, roughness: 0.1, transmission: 0.5, transparent: true, opacity: 0.8 }), 0, 0.05, 0)); g.add(mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.03, 10), M.metal, 0, 0.165, 0)); });

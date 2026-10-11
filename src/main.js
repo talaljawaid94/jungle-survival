@@ -15,6 +15,7 @@ import { Structures } from './structures.js';
 import { Gameplay } from './gameplay.js';
 import { Intro } from './intro.js';
 import { loadHeroModel, loadHeroMotion } from './heroModel.js';
+import { loadToolModels } from './hero.js';
 import { loadAnimalModel, setFurCamera } from './animalGLB.js';
 import { loadHelicopterModel } from './helicopter.js';
 import { loadWreckModel } from './wreckScene.js';
@@ -357,6 +358,7 @@ function frame() {
 setTimeout(async () => {
   await loadStep('Loading characters and animals', 4);
   try { await loadHeroMotion(MODELS + 'hero_motion.json'); } catch (e) { console.warn('hero motion failed, using procedural walk', e); }
+  try { await loadToolModels(MODELS + 'tools.glb'); } catch (e) { console.warn('tool models failed, using procedural tools', e); }
   try { await loadHeroModel(MODELS + 'survivor.glb'); } catch (e) { console.warn('hero model failed, using procedural hero', e); }
   try { await loadWreckModel(MODELS + 'helicopter_wreck.glb'); } catch (e) { console.warn('wreck model failed', e); }
   try { await loadHelicopterModel(MODELS + 'helicopter.glb'); } catch (e) { console.warn('helicopter model failed, using procedural helicopter', e); }
