@@ -94,7 +94,7 @@ export function install(g, opt = {}) {
     { name: 'G', frames: 95, setup() {          // the jaguar watches from the dark
         beginAt(19.9); const f = fireSpot(); this.f = f; if (!g.structures.fires.length) g.structures.placeCampfire(f.x, f.z, 9999);
         const ti = give('torch'); g.gameplay.select(ti); face(f.x + 2.3, f.z + 0.5, f.x + 12, f.z + 6); P().char.group.visible = true;
-        const dx = Math.sin(P().yaw), dz = Math.cos(P().yaw), jx = P().pos.x + dx * 7.5, jz = P().pos.z + dz * 7.5; const a = g.animals.spawn('jaguar', jx, jz, Math.atan2(P().pos.x - jx, P().pos.z - jz)); this.a = a; this.j = { x: jx, z: jz }; settle(10, (c) => cams.rel(c, 2.4, 0.9, 1.5, 7.5, 0.7)); },
+        const dx = Math.sin(P().yaw), dz = Math.cos(P().yaw), jx = P().pos.x + dx * 7.5, jz = P().pos.z + dz * 7.5; const a = g.animals.spawn('jaguar', jx, jz, Math.atan2(P().pos.x - jx, P().pos.z - jz)); this.a = a; a.frozen = true; a.y = gh(jx, jz); this.j = { x: jx, z: jz }; settle(10, (c) => cams.rel(c, 2.4, 0.9, 1.5, 7.5, 0.7)); },
       tick(i) { const t = i / 95, a = this.a, j = this.j, y = P().yaw, dx = Math.sin(y), dz = Math.cos(y), rx = -dz, rz = dx; tick([], [], (c) => {
           a.x = j.x; a.z = j.z; a.state = 'idle'; a.g.position.set(j.x, gh(j.x, j.z), j.z); a.g.rotation.y = Math.atan2(P().pos.x - j.x, P().pos.z - j.z);      // pinned: it would otherwise flee from the torch
           const fw = lerp(-2.8, -1.8, ease(t)), sd = lerp(2.3, 0.4, ease(t)), h = lerp(0.8, 0.55, t);

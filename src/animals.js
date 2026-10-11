@@ -88,6 +88,7 @@ export class Animals {
         if (a.corpseT > 240) this.remove(a);
         continue;
       }
+      if (a.frozen) { a.speed = 0; a.state = 'idle'; a.m.animate(a, dt); a.g.position.set(a.x, a.y, a.z); a.g.visible = d < 170; continue; }      // film capture: hold the animal in place (idle breathing, tail and head only)
       a.atkCd -= dt; a.timer -= dt;
       let targetSpeed = 0, wantHeading = a.heading;
       const sp = a.sp;

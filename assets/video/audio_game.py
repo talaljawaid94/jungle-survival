@@ -31,30 +31,54 @@ def rotor_pulses(rate, depth=1.0, t0=0.0, t1=DUR, jitter=0.0):
         b = np.sin(2 * np.pi * (62 + 18 * j) * tt) * np.exp(-tt * 38) + 0.55 * np.sin(2 * np.pi * 118 * tt) * np.exp(-tt * 55) + 0.35 * noise(Ln) * np.exp(-tt * 70)
         e = min(N, i + Ln); out[i:e] += b[:e - i] * depth
     return out
-gate = env([(0, 0.0), (0.6, 1.0), (13.7, 1.0), (13.8, 0.0)])
-appr = env([(0, 0.35), (2.6, 1.0), (4.6, 0.6), (8.4, 0.7), (13.6, 1.0)])
-rate = np.interp(T, [0, 5.2, 8.0, 13.7], [11.0, 11.0, 9.0, 6.5]) + 0.25 * np.sin(2 * np.pi * 0.7 * T)
-thump = lp(rotor_pulses(rate, 1.0, 0.0, 13.8, 0.06), 420) * gate * appr
-tf = np.interp(T, [0, 5.2, 5.7, 7.0, 10.0, 13.7], [2300, 2300, 2050, 1500, 800, 220]) * (1 + 0.012 * np.sin(2 * np.pi * 6.0 * T))
+gate = env([(0, 0.0), (0.6, 1.0), (13.95, 1.0), (14.03, 0.0)])
+appr = env([(0, 0.35), (2.6, 1.0), (4.6, 0.6), (8.4, 0.7), (13.95, 1.0)])
+rate = np.interp(T, [0, 5.2, 8.0, 14.0], [11.0, 11.0, 9.0, 6.5]) + 0.25 * np.sin(2 * np.pi * 0.7 * T)
+thump = lp(rotor_pulses(rate, 1.0, 0.0, 14.0, 0.06), 420) * gate * appr
+tf = np.interp(T, [0, 5.2, 5.7, 7.0, 10.0, 14.0], [2300, 2300, 2050, 1500, 800, 220]) * (1 + 0.012 * np.sin(2 * np.pi * 6.0 * T))
 tp = np.cumsum(tf) / SR * 2 * np.pi
-turb = (0.8 * np.sin(tp) + 0.35 * np.sin(2.01 * tp)) * env([(0, 0.05), (2.6, 0.12), (5.0, 0.1), (11.0, 0.05), (13.7, 0.0)])
-air = lp(noise(), 900) * env([(0, 0.25), (2.6, 0.4), (8, 0.5), (13.7, 0.9), (13.8, 0.0)])
+turb = (0.8 * np.sin(tp) + 0.35 * np.sin(2.01 * tp)) * env([(0, 0.05), (2.6, 0.12), (5.0, 0.1), (11.0, 0.05), (14.0, 0.0)])
+air = lp(noise(), 900) * env([(0, 0.25), (2.6, 0.4), (8, 0.5), (13.95, 0.9), (14.03, 0.0)])
 pan_fly = np.clip(np.interp(T, [0, 1.4, 2.6, 4.0, 6.0], [-0.55, -0.3, 0.0, 0.5, 0.2]), -1, 1)
 add(thump * 0.9, pan_fly); add(turb, pan_fly, 0.5); add(air * 0.16, 0.0)
 for tc, d_, a in ((5.3, 0.35, 1.0), (5.9, 0.28, 0.8), (6.4, 0.4, 0.9), (6.9, 0.22, 0.6), (7.4, 0.5, 0.7)):
     e = np.clip(1 - np.abs(T - (tc + d_ / 2)) / (d_ / 2), 0, 1) ** 1.5
     add(bp(noise(), 90, 900) * e * a * 0.9, 0.0); add(lp(noise(), 200) * e * a * 1.2, 0.0)
-alarm = ((T > 5.6) & (T < 13.7)); beep = (np.sin(2 * np.pi * 1180 * T) + 0.4 * np.sin(2 * np.pi * 2360 * T)) * (((T * 2.4) % 1.0) < 0.38) * alarm
+alarm = ((T > 5.6) & (T < 14.0)); beep = (np.sin(2 * np.pi * 1180 * T) + 0.4 * np.sin(2 * np.pi * 2360 * T)) * (((T * 2.4) % 1.0) < 0.38) * alarm
 add(smooth(beep, 1.5) * 0.045, 0.1)
-ti = 13.8; dt = np.clip(T - ti, 0, None); on = T >= ti
-boom = np.sin(2 * np.pi * (48 - 14 * np.clip(dt / 1.2, 0, 1)) * dt) * np.exp(-dt * 1.9) * on
-crunch = (hp(noise(), 300) * np.exp(-dt * 6) + bp(noise(), 600, 3500) * np.exp(-dt * 11)) * on
-debris = bp(noise(), 1500, 6000) * np.exp(-dt * 2.4) * on * (rng.random(N) < 0.012) * 4.0
-add(boom * 1.7, 0.0); add(crunch * 0.9, 0.0); add(smooth(debris, 3) * 0.6, np.sin(T * 17) * 0.6)
-ring = np.sin(2 * np.pi * 3150 * T) * np.exp(-dt * 1.4) * on * 0.03; add(ring, -0.2); add(ring * 0.9, 0.0)
+TI = 14.03                                   # the explosion lands on frame 421 of the footage (slow-motion impact)
+dt = np.clip(T - TI, 0, None); on = (T >= TI).astype(np.float64)
+def band(fc_lo, fc_hi, o=2): return bp(noise(), fc_lo, fc_hi, o)
+# 1. crack: a very short, bright transient (the shock front)
+crack_b = hp(noise(), 600) * np.exp(-dt * 90) * on
+add(crack_b * 1.1, np.sin(T * 41) * 0.3)
+# 2. fireball whoomph: noise whose brightness collapses from bright to dark over ~1.6 s (staggered low-passed layers)
+whoosh = (lp(noise(), 4200) * np.exp(-dt * 7.5) + lp(noise(), 1500) * np.exp(-dt * 4.2) + lp(noise(), 520) * np.exp(-dt * 2.4) + lp(noise(), 160) * np.exp(-dt * 1.3)) * on
+whoosh_L = (lp(noise(), 3000) * np.exp(-dt * 6.0) + lp(noise(), 700) * np.exp(-dt * 3.0)) * on
+add(whoosh * 0.55, -0.25); add(whoosh_L * 0.45, 0.25)
+# 3. sub boom: a sine that falls in pitch, with a short punch on top
+f_sub = 62 - 36 * (1 - np.exp(-dt * 1.4)); ph_sub = np.cumsum(f_sub) / SR * 2 * np.pi
+sub = (np.sin(ph_sub) + 0.45 * np.sin(2 * ph_sub + 0.4)) * (1 - np.exp(-dt * 400)) * np.exp(-dt * 1.15) * on
+punch = np.sin(2 * np.pi * 95 * dt) * np.exp(-dt * 18) * on
+add(sub * 2.1, 0.0); add(punch * 1.0, 0.0)
+# 4. rumble tail: low noise with slow irregular swell, ~6 s
+rum = lp(noise(), 210) * (0.65 + 0.35 * lp(noise(), 3) * 7) * np.exp(-dt * 0.62) * on
+add(rum * 0.9, -0.15); add(lp(noise(), 130) * np.exp(-dt * 0.5) * on * 0.8, 0.15)
+# 5. forest reflections of the shock: delayed, darker repeats
+for delay, g_ in ((0.23, 0.45), (0.51, 0.3), (0.94, 0.2)):
+    sh = np.roll(lp(hp(noise(), 120), 900) * np.exp(-dt * 6.0) * on, int(delay * SR)); sh[:int(delay * SR)] = 0; add(sh * g_, rng.uniform(-0.7, 0.7))
+# 6. debris: wood and metal falling around, scattered over ~4 s
+for k in range(70):
+    td = TI + 0.18 + abs(rng.normal(0, 1.5)) ** 1.1 + rng.uniform(0, 0.5)
+    if td > TI + 5.5: continue
+    Ln = int(rng.uniform(0.03, 0.12) * SR); tt = np.arange(Ln) / SR; f0 = rng.uniform(90, 700)
+    thump = np.sin(2 * np.pi * f0 * tt) * np.exp(-tt * rng.uniform(25, 60)) + 0.6 * lp(noise(Ln), 2200) * np.exp(-tt * rng.uniform(40, 90))
+    burst(td, thump, rng.uniform(-0.9, 0.9), rng.uniform(0.05, 0.22) * np.exp(-(td - TI) * 0.35))
+# 7. ear ring after the shock
+ring = np.sin(2 * np.pi * 3150 * T) * np.exp(-dt * 1.0) * on * 0.03 * np.clip(dt / 0.15, 0, 1); add(ring, -0.2); add(ring * 0.9, 0.0)
 
 # ------------------------------------------------------------------------------------------------ ambience and fire (14 - 45)
-roar_g = env([(13.8, 0.0), (14.4, 1.0), (23, 0.8), (33.0, 0.3), (34.0, 1.0), (41.0, 0.8), (45.1, 0.2)])
+roar_g = env([(14.03, 0.0), (15.2, 1.0), (23, 0.8), (33.0, 0.3), (34.0, 1.0), (41.0, 0.8), (45.1, 0.2)])
 roar = lp(noise(), 380) * (0.6 + 0.4 * lp(noise(), 6) * 6) * 0.5
 crack = np.zeros(N)
 for i in np.where(rng.random(N) < 38.0 / SR)[0]:
