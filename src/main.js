@@ -38,7 +38,7 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 900);
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); if (post) post.setSize(innerWidth, innerHeight); });
+addEventListener('resize', () => { if (window.__filmSize) return; renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); if (post) post.setSize(innerWidth, innerHeight); });
 
 const ui = new UI();
 const ctl = new Controls(canvas);
@@ -116,7 +116,7 @@ async function build() {
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !G.paused && !G.modal) ui.on.pause(); });
   ui.showMenu(hasSave());
   await loadStep('Ready', 100); const ld = document.getElementById('loading'); if (ld) { ld.classList.add('out'); setTimeout(() => ld.remove(), 800); }
-  if (import.meta.env.DEV || location.search.includes('debug')) window.game = { fx, post, G, world, player, stats, inv, animals, structures, gameplay, intro, sky, camera, ui, audio, map, scene, renderer, save, startNew, ctl, advance };
+  if (import.meta.env.DEV || location.search.includes('debug')) window.game = { fx, post, G, world, player, stats, inv, animals, structures, gameplay, intro, sky, camera, ui, audio, map, scene, renderer, save, startNew, ctl, advance, filmResize, filmTick, beginPlay, audioCtx };
 }
 
 // ------------------------------------------------------------------ state changes
@@ -330,8 +330,18 @@ function advance(sec, hold = {}) {
   renderFrame(1 / 30, simT); takePhoto();
 }
 
+// ---- film capture (debug only): fixed-timestep stepping so a video can be recorded frame by frame
+function filmResize(w, h) { window.__filmSize = [w, h]; renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (post) post.setSize(w, h); }
+function filmTick(dt = 1 / 30, down = [], hit = [], camFn = null) {
+  window.__film = true; if (window.__filmSize && (canvas.width !== window.__filmSize[0] || canvas.height !== window.__filmSize[1])) filmResize(...window.__filmSize);
+  ctl.keys = new Set(down); for (const k of hit) ctl.pressed.add(k);
+  if (G.paused) { G.paused = false; ui.showPause(false); }
+  simT += dt; setFurCamera(camera.position); step(dt, simT); if (camFn) camFn(camera, dt); renderFrame(dt, simT); ctl.endFrame();
+}
+
 function frame() {
   requestAnimationFrame(frame);
+  if (window.__film) return;
   const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05);
   if (G.state === 'play' && !G.paused) updateDRS(rawDt);
   setFurCamera(camera.position);
