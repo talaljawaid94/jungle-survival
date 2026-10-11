@@ -13,18 +13,18 @@ def jaguar_metaball(res=0.011):
     def mirror(c, dims, tilt=(0, 0, 0), stiff=2.0):
         for s in (-1, 1): el((s * c[0], c[1], c[2]), dims, (tilt[0], tilt[1] * s, tilt[2] * s), stiff)
     # long, deep-chested torso with a tucked waist
-    el((0, -0.32, 0.56), (0.32, 0.36, 0.40)); el((0, 0.0, 0.55), (0.30, 0.50, 0.34)); el((0, 0.30, 0.56), (0.26, 0.36, 0.30))
+    el((0, -0.30, 0.56), (0.38, 0.40, 0.46)); el((0, 0.0, 0.54), (0.32, 0.50, 0.36)); el((0, 0.30, 0.56), (0.28, 0.36, 0.32)); mirror((0.15, -0.30, 0.66), (0.15, 0.26, 0.22), (0.1, 0, 0))
     mirror((0.13, 0.42, 0.50), (0.16, 0.30, 0.32), (0.15, 0, 0)); mirror((0.13, -0.30, 0.52), (0.17, 0.30, 0.34), (-0.15, 0, 0)); el((0, -0.04, 0.44), (0.24, 0.55, 0.17))
     # neck and head: broad skull, short strong muzzle
-    el((0, -0.55, 0.60), (0.31, 0.28, 0.33), (-0.3, 0, 0)); el((0, -0.74, 0.62), (0.23, 0.23, 0.20), (0.1, 0, 0))
-    el((0, -0.90, 0.575), (0.13, 0.19, 0.105), (0.22, 0, 0)); el((0, -0.88, 0.525), (0.105, 0.22, 0.065), (0.15, 0, 0)); mirror((0.095, -0.77, 0.57), (0.12, 0.17, 0.15)); mirror((0.075, -0.80, 0.665), (0.07, 0.10, 0.05)); el((0, -0.985, 0.585), (0.075, 0.05, 0.058)); mirror((0.04, -0.93, 0.56), (0.05, 0.10, 0.07))
+    el((0, -0.55, 0.60), (0.36, 0.30, 0.38), (-0.3, 0, 0)); el((0, -0.75, 0.62), (0.25, 0.28, 0.23), (0.08, 0, 0))
+    el((0, -0.90, 0.575), (0.145, 0.17, 0.105), (0.18, 0, 0)); el((0, -0.87, 0.52), (0.13, 0.20, 0.07), (0.1, 0, 0)); mirror((0.10, -0.77, 0.555), (0.115, 0.19, 0.16)); mirror((0.085, -0.825, 0.685), (0.085, 0.13, 0.055), (0.2, 0, 0)); el((0, -0.975, 0.58), (0.10, 0.05, 0.062)); mirror((0.055, -0.93, 0.545), (0.07, 0.12, 0.085))
     # limbs: heavy forearms, big paws
-    mirror((0.12, -0.34, 0.40), (0.12, 0.15, 0.28)); mirror((0.11, -0.34, 0.22), (0.085, 0.095, 0.2)); mirror((0.11, -0.36, 0.09), (0.085, 0.12, 0.085)); mirror((0.11, -0.385, 0.05), (0.105, 0.15, 0.08))
+    mirror((0.13, -0.34, 0.40), (0.15, 0.18, 0.30)); mirror((0.115, -0.34, 0.22), (0.105, 0.115, 0.22)); mirror((0.11, -0.36, 0.09), (0.105, 0.14, 0.09)); mirror((0.11, -0.385, 0.05), (0.125, 0.17, 0.085))
     for s_ in (-1, 1):
-        for tx in (-0.034, 0.0, 0.034): el((s_ * 0.11 + tx, -0.44, 0.034 + (0.006 if tx == 0 else 0)), (0.036, 0.075, 0.045), (0, 0, 0), 2.4)
-    mirror((0.13, 0.40, 0.38), (0.14, 0.22, 0.30), (-0.2, 0, 0)); mirror((0.12, 0.46, 0.22), (0.08, 0.095, 0.2), (0.3, 0, 0)); mirror((0.12, 0.45, 0.09), (0.085, 0.12, 0.085)); mirror((0.12, 0.43, 0.05), (0.105, 0.15, 0.08))
+        for tx in (-0.04, 0.0, 0.04): el((s_ * 0.11 + tx, -0.44, 0.034 + (0.006 if tx == 0 else 0)), (0.036, 0.075, 0.045), (0, 0, 0), 2.4)
+    mirror((0.14, 0.40, 0.38), (0.17, 0.25, 0.32), (-0.2, 0, 0)); mirror((0.125, 0.46, 0.22), (0.10, 0.115, 0.22), (0.3, 0, 0)); mirror((0.12, 0.45, 0.09), (0.105, 0.14, 0.09)); mirror((0.12, 0.43, 0.05), (0.125, 0.17, 0.085))
     for s_ in (-1, 1):
-        for tx in (-0.034, 0.0, 0.034): el((s_ * 0.12 + tx, 0.375, 0.034 + (0.006 if tx == 0 else 0)), (0.036, 0.075, 0.045), (0, 0, 0), 2.4)
+        for tx in (-0.04, 0.0, 0.04): el((s_ * 0.12 + tx, 0.375, 0.034 + (0.006 if tx == 0 else 0)), (0.036, 0.075, 0.045), (0, 0, 0), 2.4)
     return ob
 
 def paint_jaguar(body):
@@ -56,9 +56,9 @@ def jaguar_extras(mats, body):
         bpy.ops.object.transform_apply(scale=True); _vcol_solid(lid, (0.55, 0.38, 0.17)); lid.data.materials.append(mats['coat']); [setattr(p, 'use_smooth', True) for p in lid.data.polygons]; out.append(lid)
         # rounded ears: dark back with a pale spot, pale inside
         bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=14, radius=1.0)
-        for v in bm.verts: v.co.z += 0.4; v.co.x *= 0.026 + 0.014 * v.co.z; v.co.y *= 0.07; v.co.z *= 0.068
+        for v in bm.verts: v.co.z += 0.4; v.co.x *= (0.026 + 0.014 * v.co.z) * 0.95; v.co.y *= 0.055; v.co.z *= 0.060
         me = bpy.data.meshes.new('JagEar'); bm.to_mesh(me); bm.free(); ear = bpy.data.objects.new('JagEar', me); bpy.context.scene.collection.objects.link(ear)
-        ear.location = (s * 0.118, -0.69, 0.715); ear.rotation_euler = (-0.15, s * 0.45, s * 0.15); [setattr(p, 'use_smooth', True) for p in me.polygons]
+        ear.location = (s * 0.115, -0.69, 0.715); ear.rotation_euler = (-0.1, s * 0.62, s * 0.2); [setattr(p, 'use_smooth', True) for p in me.polygons]
         col = me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
         for i, v in enumerate(me.vertices):
             inner = smoothstep(0.1, 0.8, v.normal.x * s) ; spot = smoothstep(0.55, 0.3, math.hypot(v.co.y * 1.0, v.co.z - 0.05) * 22)
@@ -83,11 +83,11 @@ def jaguar_extras(mats, body):
             pad.name = 'Toe_%s_%s_pad' % ('f' if front else 'h', 'l' if s > 0 else 'r'); pad.scale = (1.2, 1.5, 0.35); bpy.ops.object.transform_apply(scale=True)
             [setattr(p, 'use_smooth', True) for p in pad.data.polygons]; pad.data.materials.append(mats['nose']); out.append(pad)
     # nose
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.026, segments=16, ring_count=10, location=surf((0, -1.03, 0.585), 0.004)[0]); nz = bpy.context.active_object; nz.name = 'JagNose'; nz.scale = (1.2, 0.8, 0.8)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.026, segments=16, ring_count=10, location=surf((0, -1.015, 0.58), 0.004)[0]); nz = bpy.context.active_object; nz.name = 'JagNose'; nz.scale = (1.2, 0.8, 0.8)
     bpy.ops.object.transform_apply(scale=True); nz.data.materials.append(mats['nose']); [setattr(p, 'use_smooth', True) for p in nz.data.polygons]; out.append(nz)
     # long tail with a dark tip, spotted then ringed
     ring = lambda t: (0.10, 0.07, 0.05) if (t > 0.92 or (t > 0.45 and int(t * 18) % 2 == 0)) else (0.80, 0.56, 0.22)
-    tail = tapered_tube('JagTail', [(0, 0.55, 0.57), (0, 0.76, 0.62), (0, 0.98, 0.52), (0, 1.18, 0.38), (0, 1.30, 0.22)], [0.066, 0.060, 0.054, 0.047, 0.036], segs=12, subdiv_each=8, color_fn=ring)
+    tail = tapered_tube('JagTail', [(0, 0.55, 0.57), (0, 0.76, 0.62), (0, 0.98, 0.52), (0, 1.18, 0.38), (0, 1.30, 0.22)], [0.052, 0.048, 0.044, 0.040, 0.034], segs=12, subdiv_each=8, color_fn=ring)
     tail.data.materials.append(mats['mane']); out.append(tail)
     return out
 
@@ -137,7 +137,7 @@ def build_jaguar_all(export_path=None):
     paint_jaguar(body); mats = jaguar_materials(); body.data.materials.clear(); body.data.materials.append(mats['coat'])
     bpy.context.view_layer.objects.active = body; body.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.005, scale_to_bounds=False); bpy.ops.object.mode_set(mode='OBJECT')
-    for l in body.data.uv_layers[0].data: l.uv = (l.uv[0] * 2.3, l.uv[1] * 2.3)
+    for l in body.data.uv_layers[0].data: l.uv = (l.uv[0] * 3.4, l.uv[1] * 3.4)
     extras = jaguar_extras(mats, body); rig = build_jaguar_rig([body] + extras)
     if export_path:
         for pb in rig.pose.bones: pb.rotation_mode = 'XYZ'; pb.rotation_euler = (0, 0, 0)

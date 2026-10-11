@@ -64,7 +64,7 @@ export function install(g, opt = {}) {
       tick(i) { const o = this.o, t = i / 110, a = this.ca + lerp(-0.18, 0.18, ease(t)); tick(i >= 6 && i < 100 ? ['KeyE'] : [], i === 6 ? ['KeyE'] : [], (c) => cams.ag(c, o.x - 0.6 + Math.cos(a) * 3.6, lerp(1.2, 1.5, t), o.z + Math.sin(a) * 3.6, o.x - 0.6, 0.85, o.z, 38)); } },
 
     { name: 'D', frames: 95, setup() {          // a sprint through the jungle: find a clear corridor
-        beginAt(17.3); const c = crash(), trees = Object.values(g.world.items).filter((o) => o.kind === 'tree' || o.kind === 'rock'); let best = null;
+        beginAt(17.3); g.gameplay.select(give('stone_axe'));  const c = crash(), trees = Object.values(g.world.items).filter((o) => o.kind === 'tree' || o.kind === 'rock'); let best = null;
         for (let a = 0; a < 40; a++) for (const r of [14, 22, 30]) {
           const ang = a / 40 * Math.PI * 2, sx = c.x + Math.cos(ang) * r, sz = c.z + Math.sin(ang) * r;
           for (const hd of [0, 1, 2, 3, 4, 5].map((k) => k * 1.0472)) {
@@ -89,9 +89,10 @@ export function install(g, opt = {}) {
         beginAt(19.9); const f = fireSpot(); this.f = f; if (!g.structures.fires.length) g.structures.placeCampfire(f.x, f.z, 9999);
         const ti = give('torch'); g.gameplay.select(ti); face(f.x + 2.3, f.z + 0.5, f.x + 12, f.z + 6); P().char.group.visible = true;
         const dx = Math.sin(P().yaw), dz = Math.cos(P().yaw), jx = P().pos.x + dx * 7.5, jz = P().pos.z + dz * 7.5; const a = g.animals.spawn('jaguar', jx, jz, Math.atan2(P().pos.x - jx, P().pos.z - jz)); this.a = a; this.j = { x: jx, z: jz }; settle(10, (c) => cams.rel(c, 2.4, 0.9, 1.5, 7.5, 0.7)); },
-      tick(i) { const t = i / 95, a = this.a, j = this.j; tick([], [], (c) => {
+      tick(i) { const t = i / 95, a = this.a, j = this.j, y = P().yaw, dx = Math.sin(y), dz = Math.cos(y), rx = -dz, rz = dx; tick([], [], (c) => {
           a.x = j.x; a.z = j.z; a.state = 'idle'; a.g.position.set(j.x, gh(j.x, j.z), j.z); a.g.rotation.y = Math.atan2(P().pos.x - j.x, P().pos.z - j.z);      // pinned: it would otherwise flee from the torch
-          cams.rel(c, lerp(2.6, 2.0, t), lerp(1.0, 0.7, t), 1.5, 7.5, 0.75, lerp(40, 34, t)); }); } },
+          const fw = lerp(-2.8, -1.8, ease(t)), sd = lerp(2.3, 0.4, ease(t)), h = lerp(0.8, 0.55, t);
+          c.position.set(j.x + dx * fw + rx * sd, gh(j.x, j.z) + h, j.z + dz * fw + rz * sd); c.lookAt(j.x, gh(j.x, j.z) + lerp(0.55, 0.62, t), j.z); cams.fov(c, lerp(36, 30, t)); }); } },
 
     { name: 'H', frames: 140, setup() {          // crane up from the camp
         beginAt(19.9); const f = fireSpot(); this.f = f; if (!g.structures.fires.length) g.structures.placeCampfire(f.x, f.z, 9999); face(f.x + 1.7, f.z + 0.3, f.x, f.z); P().char.group.visible = true; settle(20, (c) => cams.ag(c, f.x - 3, 1.3, f.z - 3, f.x, 1.5, f.z, 44)); },
