@@ -13,36 +13,43 @@ def jaguar_metaball(res=0.011):
     def mirror(c, dims, tilt=(0, 0, 0), stiff=2.0):
         for s in (-1, 1): el((s * c[0], c[1], c[2]), dims, (tilt[0], tilt[1] * s, tilt[2] * s), stiff)
     # long, deep-chested torso with a tucked waist
-    el((0, -0.30, 0.56), (0.38, 0.40, 0.46)); el((0, 0.0, 0.54), (0.32, 0.50, 0.36)); el((0, 0.30, 0.56), (0.28, 0.36, 0.32)); mirror((0.15, -0.30, 0.66), (0.15, 0.26, 0.22), (0.1, 0, 0))
-    mirror((0.13, 0.42, 0.50), (0.16, 0.30, 0.32), (0.15, 0, 0)); mirror((0.13, -0.30, 0.52), (0.17, 0.30, 0.34), (-0.15, 0, 0)); el((0, -0.04, 0.44), (0.24, 0.55, 0.17))
+    el((0, -0.30, 0.56), (0.28, 0.40, 0.42)); el((0, 0.0, 0.54), (0.23, 0.52, 0.30)); el((0, 0.32, 0.56), (0.25, 0.36, 0.30)); mirror((0.10, -0.30, 0.66), (0.12, 0.26, 0.20), (0.1, 0, 0))
+    mirror((0.11, 0.42, 0.50), (0.14, 0.30, 0.30), (0.15, 0, 0)); mirror((0.11, -0.30, 0.52), (0.13, 0.30, 0.34), (-0.15, 0, 0)); el((0, -0.04, 0.44), (0.19, 0.55, 0.14))
     # neck and head: broad skull, short strong muzzle
-    el((0, -0.55, 0.60), (0.36, 0.30, 0.38), (-0.3, 0, 0)); el((0, -0.75, 0.62), (0.25, 0.28, 0.23), (0.08, 0, 0))
-    el((0, -0.90, 0.575), (0.145, 0.17, 0.105), (0.18, 0, 0)); el((0, -0.87, 0.52), (0.13, 0.20, 0.07), (0.1, 0, 0)); mirror((0.10, -0.77, 0.555), (0.115, 0.19, 0.16)); mirror((0.085, -0.825, 0.685), (0.085, 0.13, 0.055), (0.2, 0, 0)); el((0, -0.975, 0.58), (0.10, 0.05, 0.062)); mirror((0.055, -0.93, 0.545), (0.07, 0.12, 0.085))
+    el((0, -0.55, 0.60), (0.28, 0.30, 0.34), (-0.3, 0, 0)); el((0, -0.75, 0.62), (0.22, 0.27, 0.21), (0.08, 0, 0))
+    el((0, -0.91, 0.565), (0.125, 0.20, 0.10), (0.16, 0, 0)); el((0, -0.88, 0.515), (0.11, 0.21, 0.065), (0.1, 0, 0)); mirror((0.09, -0.77, 0.555), (0.10, 0.19, 0.15)); mirror((0.085, -0.825, 0.685), (0.085, 0.13, 0.055), (0.2, 0, 0)); el((0, -0.975, 0.58), (0.10, 0.05, 0.062)); mirror((0.055, -0.93, 0.545), (0.07, 0.12, 0.085))
     # limbs: heavy forearms, big paws
-    mirror((0.13, -0.34, 0.40), (0.15, 0.18, 0.30)); mirror((0.115, -0.34, 0.22), (0.105, 0.115, 0.22)); mirror((0.11, -0.36, 0.09), (0.105, 0.14, 0.09)); mirror((0.11, -0.385, 0.05), (0.125, 0.17, 0.085))
+    mirror((0.12, -0.34, 0.40), (0.125, 0.16, 0.30)); mirror((0.105, -0.34, 0.22), (0.085, 0.10, 0.22)); mirror((0.10, -0.36, 0.09), (0.085, 0.12, 0.09)); mirror((0.10, -0.385, 0.05), (0.11, 0.16, 0.085))
     for s_ in (-1, 1):
         for tx in (-0.04, 0.0, 0.04): el((s_ * 0.11 + tx, -0.44, 0.034 + (0.006 if tx == 0 else 0)), (0.036, 0.075, 0.045), (0, 0, 0), 2.4)
-    mirror((0.14, 0.40, 0.38), (0.17, 0.25, 0.32), (-0.2, 0, 0)); mirror((0.125, 0.46, 0.22), (0.10, 0.115, 0.22), (0.3, 0, 0)); mirror((0.12, 0.45, 0.09), (0.105, 0.14, 0.09)); mirror((0.12, 0.43, 0.05), (0.125, 0.17, 0.085))
+    mirror((0.125, 0.40, 0.38), (0.15, 0.24, 0.32), (-0.2, 0, 0)); mirror((0.11, 0.46, 0.22), (0.085, 0.10, 0.22), (0.3, 0, 0)); mirror((0.11, 0.45, 0.09), (0.085, 0.12, 0.09)); mirror((0.11, 0.43, 0.05), (0.11, 0.16, 0.085))
     for s_ in (-1, 1):
         for tx in (-0.04, 0.0, 0.04): el((s_ * 0.12 + tx, 0.375, 0.034 + (0.006 if tx == 0 else 0)), (0.036, 0.075, 0.045), (0, 0, 0), 2.4)
     return ob
 
 def paint_jaguar(body):
+    """vertex colour (multiplied by the spot texture): golden back, orange face, white bib, belly, chin, inner and lower legs, paws"""
     me = body.data; col = me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
+    gold = Vector((0.80, 0.62, 0.34)); amber = Vector((0.86, 0.57, 0.28)); white = Vector((0.97, 0.94, 0.86))
     for i, v in enumerate(me.vertices):
         x, y, z = v.co; n = v.normal; up = n.z
-        tan = Vector((0.80, 0.56, 0.22)); cream = Vector((0.93, 0.84, 0.66))
-        c = tan * (0.82 + 0.25 * smoothstep(0.0, 0.9, up)); belly = smoothstep(0.1, -0.7, up)
-        c = c.lerp(cream, belly)
-        if z < 0.32: c = c.lerp(cream, smoothstep(0.32, 0.12, z) * 0.25) if abs(x) < 0.0 else c
-        if y < -0.88 and z < 0.62: c = c.lerp(cream, 0.85 * smoothstep(-0.88, -0.93, y))                 # pale muzzle and chin
-        if y < -0.9 and z > 0.57 and abs(x) < 0.04: c = c.lerp(Vector((0.14, 0.08, 0.07)), 0.9)           # nose bridge tip
-        for ex in (-0.07, 0.07):                                                                           # tear lines under the eyes
+        c = gold * (0.86 + 0.22 * smoothstep(-0.2, 0.9, up))
+        c = c.lerp(Vector((0.74, 0.50, 0.20)), smoothstep(0.35, 0.95, up) * smoothstep(-0.7, 0.0, y) * 0.35)           # darker saddle along the spine
+        belly = smoothstep(0.05, -0.55, up); c = c.lerp(white, belly)
+        bib = smoothstep(-0.18, -0.34, y) * smoothstep(0.78, 0.60, z) * smoothstep(0.17, 0.08, abs(x)) * smoothstep(-0.7, -0.2, up * 0 - 0.2 + 0.7 * (1 - abs(n.x)))
+        if y < -0.30 and y > -0.62 and z < 0.66: c = c.lerp(white, max(bib, smoothstep(0.30, 0.0, up) * 0.0))
+        c = c.lerp(white, smoothstep(0.34, 0.14, z) * 0.9)                                                             # white lower legs and paws
+        inner = smoothstep(0.10, 0.02, abs(x)) * smoothstep(0.50, 0.30, z); c = c.lerp(white, inner)
+        if y < -0.66 and z > 0.50:                                                                                     # face
+            f = smoothstep(-0.66, -0.78, y) * smoothstep(0.50, 0.58, z); c = c.lerp(amber, f * 0.85)
+        if y < -0.93 and z < 0.60: c = c.lerp(white, 0.9 * smoothstep(-0.93, -0.97, y))                                # whisker pad and chin
+        if y < -0.80 and z < 0.49: c = c.lerp(white, 0.95)
+        if y < -0.9 and z > 0.57 and abs(x) < 0.035: c = c.lerp(Vector((0.14, 0.08, 0.07)), 0.85)                      # nose bridge tip
+        for ex in (-0.07, 0.07):                                                                                       # tear lines under the eyes
             dd = math.hypot(x - ex * 1.0, (y + 0.80) * 0.9, (z - 0.58) * 1.3)
             if dd < 0.045 and z < 0.625: c = c.lerp(Vector((0.10, 0.07, 0.05)), 0.6 * (1 - dd / 0.045))
-        if z < 0.06 and ((y < -0.40 and y > -0.55) or (0.35 < y < 0.50)) and abs(math.sin((abs(x) - 0.11) * 95)) > 0.93 and (y < -0.43 or y > 0.38): c = c * 0.45
-        n1 = mnoise.noise(Vector((x * 8, y * 8, z * 8))) * 0.08
-        c = c * (1 + n1)
+        if z < 0.06 and ((y < -0.40 and y > -0.55) or (0.35 < y < 0.50)) and abs(math.sin((abs(x) - 0.11) * 95)) > 0.93 and (y < -0.43 or y > 0.38): c = c * 0.55
+        c = c * (1 + mnoise.noise(Vector((x * 8, y * 8, z * 8))) * 0.06)
         for k in range(3): c[k] = max(0.0, min(1.0, c[k]))
         col.data[i].color = (c[0] ** 2.2, c[1] ** 2.2, c[2] ** 2.2, 1.0)
 
@@ -56,9 +63,9 @@ def jaguar_extras(mats, body):
         bpy.ops.object.transform_apply(scale=True); _vcol_solid(lid, (0.55, 0.38, 0.17)); lid.data.materials.append(mats['coat']); [setattr(p, 'use_smooth', True) for p in lid.data.polygons]; out.append(lid)
         # rounded ears: dark back with a pale spot, pale inside
         bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=14, radius=1.0)
-        for v in bm.verts: v.co.z += 0.4; v.co.x *= (0.026 + 0.014 * v.co.z) * 0.95; v.co.y *= 0.055; v.co.z *= 0.060
+        for v in bm.verts: v.co.z += 0.4; v.co.x *= (0.026 + 0.014 * v.co.z) * 0.68; v.co.y *= 0.042; v.co.z *= 0.050
         me = bpy.data.meshes.new('JagEar'); bm.to_mesh(me); bm.free(); ear = bpy.data.objects.new('JagEar', me); bpy.context.scene.collection.objects.link(ear)
-        ear.location = (s * 0.115, -0.69, 0.715); ear.rotation_euler = (-0.1, s * 0.62, s * 0.2); [setattr(p, 'use_smooth', True) for p in me.polygons]
+        ear.location = (s * 0.115, -0.69, 0.715); ear.rotation_euler = (-0.12, s * 0.38, s * 0.12); [setattr(p, 'use_smooth', True) for p in me.polygons]
         col = me.color_attributes.new('Col', 'BYTE_COLOR', 'POINT')
         for i, v in enumerate(me.vertices):
             inner = smoothstep(0.1, 0.8, v.normal.x * s) ; spot = smoothstep(0.55, 0.3, math.hypot(v.co.y * 1.0, v.co.z - 0.05) * 22)
@@ -86,8 +93,8 @@ def jaguar_extras(mats, body):
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.026, segments=16, ring_count=10, location=surf((0, -1.015, 0.58), 0.004)[0]); nz = bpy.context.active_object; nz.name = 'JagNose'; nz.scale = (1.2, 0.8, 0.8)
     bpy.ops.object.transform_apply(scale=True); nz.data.materials.append(mats['nose']); [setattr(p, 'use_smooth', True) for p in nz.data.polygons]; out.append(nz)
     # long tail with a dark tip, spotted then ringed
-    ring = lambda t: (0.10, 0.07, 0.05) if (t > 0.92 or (t > 0.45 and int(t * 18) % 2 == 0)) else (0.80, 0.56, 0.22)
-    tail = tapered_tube('JagTail', [(0, 0.55, 0.57), (0, 0.76, 0.62), (0, 0.98, 0.52), (0, 1.18, 0.38), (0, 1.30, 0.22)], [0.052, 0.048, 0.044, 0.040, 0.034], segs=12, subdiv_each=8, color_fn=ring)
+    ring = lambda t: (0.10, 0.07, 0.05) if (t > 0.94 or (t > 0.62 and int(t * 22) % 2 == 0) or (t < 0.62 and (int(t * 40) * 7919) % 5 == 0)) else (0.80, 0.52, 0.18)
+    tail = tapered_tube('JagTail', [(0, 0.55, 0.57), (0, 0.76, 0.62), (0, 0.98, 0.52), (0, 1.18, 0.38), (0, 1.30, 0.22)], [0.036, 0.034, 0.031, 0.028, 0.023], segs=12, subdiv_each=8, color_fn=ring)
     tail.data.materials.append(mats['mane']); out.append(tail)
     return out
 
@@ -99,7 +106,7 @@ def build_jaguar_rig(parts):
     arm = bpy.data.armatures.new('JagRig'); rig = bpy.data.objects.new('JagRig', arm); bpy.context.scene.collection.objects.link(rig)
     bpy.context.view_layer.objects.active = rig; rig.select_set(True); bpy.ops.object.mode_set(mode='EDIT'); B = {}
     def bone(name, head, tail, parent=None):
-        eb = arm.edit_bones.new(name); eb.head = Vector(head); eb.tail = Vector(tail)
+        eb = arm.edit_bones.new(name); eb.head = Vector((head[0], head[1], hwarp(head[2]))); eb.tail = Vector((tail[0], tail[1], hwarp(tail[2])))
         if parent: eb.parent = B[parent]
         B[name] = eb
     bone('root', (0, 0.1, 0.0), (0, 0.1, 0.15)); bone('pelvis', (0, 0.40, 0.56), (0, 0.20, 0.56), 'root'); bone('spine1', (0, 0.20, 0.56), (0, -0.05, 0.56), 'pelvis'); bone('spine2', (0, -0.05, 0.56), (0, -0.36, 0.58), 'spine1')
@@ -131,14 +138,30 @@ def build_jaguar_rig(parts):
         vg = o.vertex_groups.new(name=name); vg.add(range(len(o.data.vertices)), 1.0, 'REPLACE')
     return rig
 
+# height warp: legs get taller and the body rises with them. The same function moves mesh vertices and rig bones, so animation stays valid.
+Z0, Z1, STRETCH = 0.05, 0.50, 1.30
+def hwarp(z):
+    if z <= Z0: return z
+    if z <= Z1: return Z0 + (z - Z0) * STRETCH
+    return z + (Z1 - Z0) * (STRETCH - 1.0)
+
+def warp_meshes():
+    bpy.context.view_layer.update()
+    for o in [o for o in bpy.data.objects if o.type == 'MESH']:
+        for p in o.users_collection: pass
+        me = o.data; mw = o.matrix_world.copy(); inv = mw.inverted()
+        for v in me.vertices:
+            w = mw @ v.co; w.z = hwarp(w.z); v.co = inv @ w
+        me.update()
+
 def build_jaguar_all(export_path=None):
     for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
     mb = jaguar_metaball(0.010); body = finalize_body(mb, 22000); bpy.data.objects.remove(mb, do_unlink=True)
     paint_jaguar(body); mats = jaguar_materials(); body.data.materials.clear(); body.data.materials.append(mats['coat'])
     bpy.context.view_layer.objects.active = body; body.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.005, scale_to_bounds=False); bpy.ops.object.mode_set(mode='OBJECT')
-    for l in body.data.uv_layers[0].data: l.uv = (l.uv[0] * 3.4, l.uv[1] * 3.4)
-    extras = jaguar_extras(mats, body); rig = build_jaguar_rig([body] + extras)
+    for l in body.data.uv_layers[0].data: l.uv = (l.uv[0] * 6.5, l.uv[1] * 6.5)
+    extras = jaguar_extras(mats, body); warp_meshes(); rig = build_jaguar_rig([body] + extras)
     if export_path:
         for pb in rig.pose.bones: pb.rotation_mode = 'XYZ'; pb.rotation_euler = (0, 0, 0)
         for im in bpy.data.images:
