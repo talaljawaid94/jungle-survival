@@ -43,7 +43,7 @@ export function install(g, opt = {}) {
     for (let k = 0; k < 24; k++) {
       const a = k / 24 * Math.PI * 2, cx = tx + Math.cos(a) * dist, cz = tz + Math.sin(a) * dist, dx = cx - tx, dz = cz - tz, L2 = dx * dx + dz * dz; let m = 99;
       for (const o of _occ) { if (Math.abs(o.x - tx) > dist + 3 || Math.abs(o.z - tz) > dist + 3) continue; let t = ((o.x - tx) * dx + (o.z - tz) * dz) / L2; t = Math.max(0, Math.min(1, t)); const d = Math.hypot(o.x - (tx + dx * t), o.z - (tz + dz * t)); if (d < m) m = d; }
-      const score = m - 1.3 * Math.abs(((a - prefer + Math.PI * 3) % (Math.PI * 2)) - Math.PI);       // small bias toward the preferred azimuth
+      const score = m - 0.6 * Math.abs(((a - prefer + Math.PI * 3) % (Math.PI * 2)) - Math.PI);       // small bias toward the preferred azimuth
       if (!best || score > best.score) best = { a, score, m };
     }
     return best;
@@ -70,6 +70,7 @@ export function install(g, opt = {}) {
           for (const hd of [0, 1, 2, 3, 4, 5].map((k) => k * 1.0472)) {
             const dx = Math.sin(hd), dz = Math.cos(hd), ex = sx + dx * 24, ez = sz + dz * 24; if (gh(sx, sz) < 0.5 || gh(ex, ez) < 0.5) continue;
             let m = 99; for (const o of trees) { const t = Math.max(0, Math.min(24, (o.x - sx) * dx + (o.z - sz) * dz)), d = Math.hypot(o.x - (sx + dx * t), o.z - (sz + dz * t)); if (d < m) m = d; if (m < 2.5) break; }
+            let wd = 99; for (let q = 0; q <= 1; q += 0.1) wd = Math.min(wd, Math.hypot(sx + dx * 24 * q - c.x, sz + dz * 24 * q - c.z)); if (wd < 14) continue;      // stay clear of the wreck
             let slope = Math.abs(gh(ex, ez) - gh(sx, sz)); if (m > 2.5 && (!best || m - slope * 0.3 > best.m)) best = { sx, sz, hd, m: m - slope * 0.3 };
           }
         }
@@ -77,9 +78,10 @@ export function install(g, opt = {}) {
       tick(i) { const t = i / 95; tick(['KeyW', 'ShiftLeft'], [], (c) => cams.rel(c, lerp(-3.8, -2.6, t), lerp(2.2, 3.4, t), lerp(0.7, 1.2, t), 0.5, 1.0, 46)); } },
 
     { name: 'E', frames: 112, setup() {          // chopping a tree with the axe, golden hour
-        beginAt(17.5); const o = g.world.items[426]; this.o = o; const idx = give('stone_axe'); g.gameplay.select(idx);
-        face(o.x - 1.25, o.z, o.x, o.z); P().char.group.visible = true; this.ca = clearAngle(o.x - 1.25, o.z, 3.4, Math.PI + 0.55).a; settle(10, null); },
-      tick(i) { const o = this.o, t = i / 112, a = this.ca + lerp(-0.12, 0.12, t); tick(i >= 6 && i < 106 ? ['KeyE'] : [], i === 6 ? ['KeyE'] : [], (c) => cams.ag(c, o.x - 1.25 + Math.cos(a) * 3.4, 1.55, o.z + Math.sin(a) * 3.4, o.x - 0.7, 1.35, o.z, 40)); } },
+        beginAt(17.5); const o = g.world.items[426]; this.o = o; g.gameplay.select(give('stone_axe'));
+        face(o.x - 1.25, o.z, o.x, o.z); P().char.group.visible = true; const px = o.x - 1.25;
+        const A = clearAngle(px, o.z, 3.4, Math.PI / 2), B = clearAngle(px, o.z, 3.4, -Math.PI / 2); this.ca = (A.score >= B.score ? A : B).a; this.sd = 3.4; settle(10, null); },
+      tick(i) { const o = this.o, t = i / 112, a = this.ca + lerp(-0.1, 0.1, t); tick(i >= 6 && i < 106 ? ['KeyE'] : [], i === 6 ? ['KeyE'] : [], (c) => cams.ag(c, o.x - 1.25 + Math.cos(a) * this.sd, 1.5, o.z + Math.sin(a) * this.sd, o.x - 1.0, 1.3, o.z, 40)); } },
 
     { name: 'F', frames: 120, setup() {          // campfire at night
         beginAt(19.65); const f = fireSpot(); g.structures.placeCampfire(f.x, f.z, 9999); this.f = f; face(f.x + 1.7, f.z + 0.3, f.x, f.z); P().char.group.visible = true; settle(60, (c) => cams.ag(c, f.x - 3.5, 1.0, f.z - 1, f.x + 1.2, 1.2, f.z + 0.3, 40)); },

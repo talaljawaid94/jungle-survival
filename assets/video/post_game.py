@@ -95,7 +95,7 @@ def frame_for(gi):
 
 def work(gi):
     p = OUT + "g_%04d.png" % (gi + 1)
-    if os.path.exists(p): return gi
+    if os.path.exists(p) and not os.environ.get("REDO"): return gi
     frame_for(gi).save(p, compress_level=3); return gi
 
 if __name__ == '__main__':
