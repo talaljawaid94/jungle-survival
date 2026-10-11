@@ -323,7 +323,8 @@ function buildTools() {
     const tm = glbTool('torch'); if (tm) g.add(tm); else g.add(mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.52, 10), wood, 0, 0.1, 0)); if (!tm) g.add(mesh(new THREE.CylinderGeometry(0.036, 0.026, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x1b1008, roughness: 1 }), 0, 0.4, 0));
     // flame: three nested teardrops (white core, yellow, orange) so it reads as fire; the cloth head glows from below via emissive
     const fl = new THREE.Group(); fl.position.y = tm ? 0.5 : 0.52; g.add(fl); g.userData.flame = fl;
-    for (const [r, h, c, y] of [[0.055, 0.24, 0xff7a18, 0.1], [0.04, 0.2, 0xffc23a, 0.09], [0.022, 0.14, 0xfff2b0, 0.07]]) { const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.92, depthWrite: false })); cone.position.y = y; fl.add(cone); }
+    const drop = (w, h) => { const pts = []; for (let i = 0; i <= 14; i++) { const t = i / 14, r = w * Math.pow(Math.sin(Math.pow(t, 0.62) * Math.PI), 0.9) * (1 - 0.25 * t); pts.push(new THREE.Vector2(Math.max(r, 0.0001), t * h)); } return new THREE.LatheGeometry(pts, 14); };
+    for (const [w, h, c, y, o] of [[0.05, 0.27, 0xff6a10, 0.0, 0.55], [0.036, 0.22, 0xffa626, 0.0, 0.75], [0.02, 0.14, 0xfff0a0, 0.0, 0.9]]) { const cone = new THREE.Mesh(drop(w, h), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending })); cone.position.y = y; fl.add(cone); }
     if (tm) tm.traverse((o) => { if (o.isMesh && o.material) { o.material = o.material.clone(); o.material.emissive = new THREE.Color(0xff5a10); o.material.emissiveIntensity = 0; g.userData.glow = (g.userData.glow || []).concat(o.material); } });
     const l = new THREE.PointLight(0xff9a40, 0, 30, 1.25); l.position.y = 0.6; g.add(l); g.userData.light = l;
   });

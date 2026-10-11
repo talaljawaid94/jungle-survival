@@ -83,9 +83,13 @@ export function install(g, opt = {}) {
         const A = clearAngle(px, o.z, 3.4, Math.PI / 2), B = clearAngle(px, o.z, 3.4, -Math.PI / 2); this.ca = (A.score >= B.score ? A : B).a; this.sd = 3.4; settle(10, null); },
       tick(i) { const o = this.o, t = i / 112, a = this.ca + lerp(-0.1, 0.1, t); tick(i >= 6 && i < 106 ? ['KeyE'] : [], i === 6 ? ['KeyE'] : [], (c) => cams.ag(c, o.x - 1.25 + Math.cos(a) * this.sd, 1.5, o.z + Math.sin(a) * this.sd, o.x - 1.0, 1.3, o.z, 40)); } },
 
-    { name: 'F', frames: 120, setup() {          // campfire at night
-        beginAt(19.65); const f = fireSpot(); g.structures.placeCampfire(f.x, f.z, 9999); this.f = f; face(f.x + 1.7, f.z + 0.3, f.x, f.z); P().char.group.visible = true; settle(60, (c) => cams.ag(c, f.x - 3.5, 1.0, f.z - 1, f.x + 1.2, 1.2, f.z + 0.3, 40)); },
-      tick(i) { const f = this.f, t = i / 120, a = lerp(-0.45, 0.35, ease(t)); tick([], [], (c) => cams.ag(c, f.x - Math.cos(a) * 3.6, lerp(0.85, 1.1, t), f.z - Math.sin(a) * 3.6, f.x + 1.0, 1.15, f.z + 0.3, 40)); } },
+    { name: 'F', frames: 120, setup() {          // campfire at night, then a close-up of the torch
+        beginAt(19.65); const f = fireSpot(); g.structures.placeCampfire(f.x, f.z, 9999); this.f = f; g.gameplay.select(give('torch')); face(f.x + 1.7, f.z + 0.3, f.x, f.z); P().char.group.visible = true; settle(60, (c) => cams.ag(c, f.x - 3.5, 1.0, f.z - 1, f.x + 1.2, 1.2, f.z + 0.3, 40)); },
+      tick(i) { const f = this.f, t = i / 120, a = lerp(-0.45, 0.35, ease(t)), k = ease(clamp((i - 52) / 30));
+        tick([], [], (c) => {
+          const wide = [f.x - Math.cos(a) * 3.6, gh(f.x, f.z) + lerp(0.85, 1.1, t), f.z - Math.sin(a) * 3.6], look = [f.x + 1.0, gh(f.x, f.z) + 1.15, f.z + 0.3];
+          const y = P().yaw, dx = Math.sin(y), dz = Math.cos(y), rx = -dz, rz = dx, p = P().pos, close = [p.x + dx * 1.45 - rx * 0.35, p.y + 1.55, p.z + dz * 1.45 - rz * 0.35], tl = [p.x + dx * 0.3 + rx * 0.3, p.y + 1.45, p.z + dz * 0.3 + rz * 0.3];
+          c.position.set(lerp(wide[0], close[0], k), lerp(wide[1], close[1], k), lerp(wide[2], close[2], k)); c.lookAt(lerp(look[0], tl[0], k), lerp(look[1], tl[1], k), lerp(look[2], tl[2], k)); cams.fov(c, lerp(40, 28, k)); }); } },
 
     { name: 'G', frames: 95, setup() {          // the jaguar watches from the dark
         beginAt(19.9); const f = fireSpot(); this.f = f; if (!g.structures.fires.length) g.structures.placeCampfire(f.x, f.z, 9999);
