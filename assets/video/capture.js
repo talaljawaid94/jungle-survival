@@ -117,6 +117,31 @@ export function install(g, opt = {}) {
     { name: 'H', frames: 140, setup() {          // crane up from the camp
         beginAt(19.9); const f = fireSpot(); this.f = f; if (!g.structures.fires.length) g.structures.placeCampfire(f.x, f.z, 9999); face(f.x + 1.7, f.z + 0.3, f.x, f.z); P().char.group.visible = true; settle(20, (c) => cams.ag(c, f.x - 3, 1.3, f.z - 3, f.x, 1.5, f.z, 44)); },
       tick(i) { const f = this.f, t = ease(i / 140); tick([], [], (c) => cams.ag(c, f.x - lerp(4.5, 20, t), lerp(1.4, 15, t), f.z - lerp(4.5, 22, t), f.x, lerp(1.4, 2.5, t), f.z, lerp(44, 50, t))); } },
+
+    // ------------------------------------------------------------------ walking sequence: the survivor leaves the wreck and explores the island (played with real inputs)
+    { name: 'W1', frames: 120, setup() {          // leaving the wreck: a follow camera behind and to the side, heading for the fruit tree
+        beginAt(15.5); const c = crash(), t = { x: -39, z: -127 }; this.t = t; const sx = c.x + 7, sz = c.z - 3; face(sx, sz, t.x, t.z); P().char.group.visible = true; settle(6, (cc) => cams.rel(cc, 3.6, 0.9, 1.5, 3, 1.2, 42)); },
+      tick(i) { const u = i / 120; const y = Math.atan2(this.t.x - P().pos.x, this.t.z - P().pos.z); P().yaw = y; P().heading = y; tick(['KeyW', 'AltLeft'], [], (c) => cams.rel(c, lerp(3.8, 2.9, ease(u)), lerp(1.2, 0.6, ease(u)), lerp(1.6, 1.25, ease(u)), 3, 1.1, 42)); } },
+    { name: 'W2', frames: 100, setup() {          // picking jungle fruit
+        beginAt(15.6); const t = { x: -39, z: -127 }, o = g.world.items[1659]; this.o = o; face(o.x - 1.5, o.z, o.x, o.z); P().char.group.visible = true; this.ca = clearAngle(o.x - 0.75, o.z, 3.2, Math.PI / 2).a; settle(8, null); },
+      tick(i) { const o = this.o, t = i / 100, a = this.ca + lerp(-0.15, 0.15, t); tick(i >= 8 && i < 92 ? ['KeyE'] : [], i === 8 ? ['KeyE'] : [], (c) => cams.rel(c, lerp(1.4, 0.8, t), lerp(3.0, 2.5, t), lerp(1.6, 1.5, t), 1.3, 1.55, 42)); } },
+    { name: 'W3', frames: 120, setup() {          // walking down to the palms, camera in front of him
+        beginAt(16.2); const p = { x: -47, z: -170 }; this.t = p; const sx = p.x + 3, sz = p.z + 17; face(sx, sz, p.x, p.z); P().char.group.visible = true; settle(6, null); },
+      tick(i) { const u = i / 120; const y = Math.atan2(this.t.x - P().pos.x, this.t.z - P().pos.z); P().yaw = y; P().heading = y; tick(['KeyW', 'AltLeft'], [], (c) => cams.rel(c, -lerp(4.2, 3.0, u), lerp(0.9, 0.3, u), lerp(1.0, 1.3, u), 0, 1.15, 40)); } },
+    { name: 'W4', frames: 110, setup() {          // shaking a palm for a coconut
+        beginAt(16.4); const o = g.world.items[1667]; this.o = o; face(o.x + 0.2, o.z + 1.5, o.x, o.z); P().char.group.visible = true; this.ca = clearAngle(o.x + 0.1, o.z + 0.75, 3.3, Math.PI / 2).a; settle(8, null); },
+      tick(i) { const o = this.o, t = i / 110, a = this.ca + lerp(-0.12, 0.12, t); tick(i >= 8 && i < 100 ? ['KeyE'] : [], i === 8 ? ['KeyE'] : [], (c) => cams.rel(c, lerp(0.2, -0.4, t), lerp(3.4, 2.9, t), lerp(1.0, 1.3, t), 0.9, lerp(1.6, 2.2, t), 44)); } },
+    { name: 'W5', frames: 110, setup() {          // along the beach, side-on tracking shot with the sea behind him
+        beginAt(16.8); const sx = -96, sz = -181; this.b = { hd: Math.PI / 2 }; P().teleport(sx, gh(sx, sz), sz); P().yaw = Math.PI / 2; P().heading = Math.PI / 2; P().char.group.visible = true; settle(6, null); },
+      tick(i) { const u = i / 110; P().yaw = Math.PI / 2; P().heading = Math.PI / 2; tick(['KeyW', 'AltLeft'], [], (c) => cams.rel(c, lerp(0.6, -0.6, u), lerp(3.6, 3.1, u), lerp(1.0, 1.25, u), 0.6, 1.1, 38)); } },
+    { name: 'W6', frames: 120, setup() {          // meeting wildlife: a deer grazes ahead as he walks by
+        beginAt(15.9); const c = crash(); let best = null;
+        for (let a = 0; a < 60; a++) for (const r of [26, 34, 42]) { const ang = a / 60 * Math.PI * 2, sx = c.x + Math.cos(ang) * r, sz = c.z + Math.sin(ang) * r; if (gh(sx, sz) < 0.8) continue;
+          const objs = Object.values(g.world.items).filter((o) => o.kind === 'tree' || o.kind === 'rock' || o.kind === 'palm'); for (let k = 0; k < 6; k++) { const hd = k * 1.0472 + 0.3, dx = Math.sin(hd), dz = Math.cos(hd); let m = 99; for (const o of objs) { const t = Math.max(0, Math.min(18, (o.x - sx) * dx + (o.z - sz) * dz)), d = Math.hypot(o.x - (sx + dx * t), o.z - (sz + dz * t)); if (d < m) m = d; if (m < 3.2) break; } if (m > 3.2 && gh(sx + dx * 18, sz + dz * 18) > 0.8 && (!best || m > best.m)) best = { sx, sz, hd, m }; } }
+        this.b = best; face(best.sx, best.sz, best.sx + Math.sin(best.hd), best.sz + Math.cos(best.hd)); P().char.group.visible = true; const dx = Math.sin(best.hd), dz = Math.cos(best.hd), rx = -dz, rz = dx, jx = best.sx + dx * 6.5 + rx * 2.6, jz = best.sz + dz * 6.5 + rz * 2.6;
+        const a = g.animals.spawn('deer', jx, jz, Math.atan2(-rx, -rz) + 0.4); a.frozen = true; a.y = gh(jx, jz); this.a = a; this.j = { x: jx, z: jz }; settle(6, null); },
+      tick(i) { const b = this.b, u = i / 120, a = this.a, j = this.j; P().yaw = b.hd; P().heading = b.hd; a.x = j.x; a.z = j.z; a.state = 'idle'; a.g.position.set(j.x, gh(j.x, j.z), j.z);
+        tick(['KeyW', 'AltLeft'], [], (c) => cams.rel(c, -lerp(4.5, 3.0, u), lerp(1.4, 0.4, u), lerp(1.1, 1.3, u), 0, 1.1, 40)); } },
   ];
 
   // ------------------------------------------------------------------ runner (resumable; call repeatedly until it returns 'done')

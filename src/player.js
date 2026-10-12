@@ -36,7 +36,8 @@ export class Player {
     this.swimming = ground < -0.75;
     const wading = ground < -0.05 && !this.swimming;
     this.sprinting = ableToMove && this.moving && ctl.down('ShiftLeft') && stats.energy > 4 && !this.swimming;
-    let target = this.swimming ? 2.3 : this.sprinting ? 7.2 : 3.9;
+    this.strolling = ableToMove && this.moving && ctl.down('AltLeft') && !this.sprinting && !this.swimming;      // hold Alt to walk slowly (plays the walk cycle instead of the jog)
+    let target = this.swimming ? 2.3 : this.sprinting ? 7.2 : this.strolling ? 1.9 : 3.9;
     if (wading) target *= 0.72;
     if (stats.energy < 8) target *= 0.8; if (stats.sick > 0) target *= 0.88; if (stats.health < 20) target *= 0.85;
     const slope = world.slopeAt(this.pos.x, this.pos.z); if (slope > 0.55 && !this.swimming) target *= 0.8;
