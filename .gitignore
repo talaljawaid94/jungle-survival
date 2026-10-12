@@ -13,3 +13,13 @@ marketing/*.png
 
 # raw third-party motion capture source (Mixamo/three.js example); only the baked, retargeted result ships in public/models/hero_motion.json
 assets/mixamo/
+assets/video/frames/
+assets/video/sky/
+assets/video/game_frames/
+assets/video/game_out/
+assets/video/bonfire_out/
+assets/video/bonfire_audio.wav
+assets/video/blast_audio.wav
+assets/video/walk_audio.wav
+assets/video/take_out/
+assets/video/take_audio.wav

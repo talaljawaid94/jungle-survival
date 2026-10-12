@@ -1,7 +1,16 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mulberry32, Noise, clamp } from './noise.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { hasHeroModel, createModelRig } from './heroModel.js';
+
+// Blender-built hand props (public/models/tools.glb): nodes `stone_axe` and `torch`, grip at the origin, working end along +Y. The procedural versions below are the fallback.
+let toolGLB = null;
+export async function loadToolModels(url) { toolGLB = (await new GLTFLoader().loadAsync(url)).scene; }
+function glbTool(name) {
+  const n = toolGLB && toolGLB.getObjectByName(name); if (!n) return null; const c = n.clone(true);
+  c.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; if (o.material) { const m = o.material, metal = m.metalness > 0.5; m.metalness = metal ? 0.3 : 0; m.roughness = metal ? 0.42 : Math.max(m.roughness, 0.8); m.color.setScalar(metal ? 1.35 : 2.0); m.needsUpdate = true; } } }); return c;
+}
 
 // ===================================================================== textures
 const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -308,12 +317,16 @@ function buildTools() {
   const tool = (name, fn) => { const g = grp(); g.visible = false; fn(g); T[name] = g; };
   const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.85, bumpMap: weaveBump(9, 'felt'), bumpScale: 1.5 }), stone = new THREE.MeshStandardMaterial({ color: 0x84847c, roughness: 0.95 });
   tool('knife', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.11, 10), M.leather, 0, -0.01, 0)); g.add(mesh(rbox(0.1, 0.012, 0.028, 0.004), M.gold, 0, 0.05, 0)); const b = mesh(new THREE.BoxGeometry(0.005, 0.17, 0.034), M.metal, 0, 0.14, 0); g.add(b); const tip = mesh(new THREE.ConeGeometry(0.017, 0.04, 4), M.metal, 0, 0.245, 0); tip.scale.set(0.3, 1, 1); g.add(tip); });
-  tool('stone_axe', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.017, 0.021, 0.7, 10), wood, 0, 0.14, 0)); const h = mesh(rbox(0.07, 0.15, 0.2, 0.025), stone, 0, 0.42, 0.06); h.rotation.z = 0.08; g.add(h); for (let i = 0; i < 4; i++) g.add(mesh(new THREE.TorusGeometry(0.022, 0.004, 5, 14), M.rope, 0, 0.375 + i * 0.01, 0, false)); });
+  tool('stone_axe', (g) => { const m = glbTool('stone_axe'); if (m) { g.add(m); return; } g.add(mesh(new THREE.CylinderGeometry(0.017, 0.021, 0.7, 10), wood, 0, 0.14, 0)); const h = mesh(rbox(0.07, 0.15, 0.2, 0.025), stone, 0, 0.42, 0.06); h.rotation.z = 0.08; g.add(h); for (let i = 0; i < 4; i++) g.add(mesh(new THREE.TorusGeometry(0.022, 0.004, 5, 14), M.rope, 0, 0.375 + i * 0.01, 0, false)); });
   tool('spear', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.016, 0.02, 2.0, 10), wood, 0, 0.45, 0)); g.add(mesh(new THREE.ConeGeometry(0.036, 0.22, 6), stone, 0, 1.55, 0)); for (let i = 0; i < 4; i++) g.add(mesh(new THREE.TorusGeometry(0.02, 0.004, 5, 14), M.rope, 0, 1.44 + i * 0.012, 0, false)); });
   tool('torch', (g) => {
-    g.add(mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.52, 10), wood, 0, 0.1, 0)); g.add(mesh(new THREE.CylinderGeometry(0.036, 0.026, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x1b1008, roughness: 1 }), 0, 0.4, 0));
-    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 10), new THREE.MeshBasicMaterial({ color: 0xff9a2a })); fl.position.y = 0.52; g.add(fl); g.userData.flame = fl;
-    const l = new THREE.PointLight(0xff9a40, 0, 30, 1.25); l.position.y = 0.55; g.add(l); g.userData.light = l;
+    const tm = glbTool('torch'); if (tm) g.add(tm); else g.add(mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.52, 10), wood, 0, 0.1, 0)); if (!tm) g.add(mesh(new THREE.CylinderGeometry(0.036, 0.026, 0.1, 10), new THREE.MeshStandardMaterial({ color: 0x1b1008, roughness: 1 }), 0, 0.4, 0));
+    // flame: three nested teardrops (white core, yellow, orange) so it reads as fire; the cloth head glows from below via emissive
+    const fl = new THREE.Group(); fl.position.y = tm ? 0.5 : 0.52; g.add(fl); g.userData.flame = fl;
+    const drop = (w, h) => { const pts = []; for (let i = 0; i <= 14; i++) { const t = i / 14, r = w * Math.pow(Math.sin(Math.pow(t, 0.62) * Math.PI), 0.9) * (1 - 0.25 * t); pts.push(new THREE.Vector2(Math.max(r, 0.0001), t * h)); } return new THREE.LatheGeometry(pts, 14); };
+    for (const [w, h, c, y, o] of [[0.05, 0.27, 0xff6a10, 0.0, 0.55], [0.036, 0.22, 0xffa626, 0.0, 0.75], [0.02, 0.14, 0xfff0a0, 0.0, 0.9]]) { const cone = new THREE.Mesh(drop(w, h), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending })); cone.position.y = y; fl.add(cone); }
+    if (tm) tm.traverse((o) => { if (o.isMesh && o.material) { o.material = o.material.clone(); o.material.emissive = new THREE.Color(0xff5a10); o.material.emissiveIntensity = 0; g.userData.glow = (g.userData.glow || []).concat(o.material); } });
+    const l = new THREE.PointLight(0xff9a40, 0, 30, 1.25); l.position.y = 0.6; g.add(l); g.userData.light = l;
   });
   tool('flare', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0xc01818, roughness: 0.5 }), 0, 0.05, 0)); const fl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff3a3a })); fl.position.y = 0.24; g.add(fl); g.userData.flame = fl; const l = new THREE.PointLight(0xff3030, 0, 55, 1.2); l.position.y = 0.3; g.add(l); g.userData.light = l; });
   tool('bottle', (g) => { g.add(mesh(new THREE.CylinderGeometry(0.036, 0.038, 0.2, 14), new THREE.MeshPhysicalMaterial({ color: 0x4aa8d8, roughness: 0.1, transmission: 0.5, transparent: true, opacity: 0.8 }), 0, 0.05, 0)); g.add(mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.03, 10), M.metal, 0, 0.165, 0)); });
@@ -413,6 +426,8 @@ export function createCharacter() {
   const add = (name, x = 0, y = 0, z = 0) => { const j = J[name]; if (j) { j.tx += x; j.ty += y; j.tz += z; } };
   const fingersCurl = (arm, c, thumb = c) => { for (const f of arm.hand.fingers) { f.f1.rotation.x = c * 1.15; f.f2.rotation.x = c * 1.35; } arm.hand.thumb.t1.rotation.x = thumb * 0.5; arm.hand.thumb.t2.rotation.x = thumb * 0.8; };
 
+  const GRIP = { torch: 1, flare: 1 };      // fist closure per tool (1 = fully closed)
+  const TOOL_POSE = { stone_axe: [-0.3, -0.25, 0.22, -0.9], spear: [-0.35, 0.1, 0.25, -1.2], knife: [-0.4, 0, 0.18, -1.15], torch: [-0.5, -0.1, 0.42, -1.05], flare: [-0.5, -0.1, 0.42, -1.05], bottle: [-0.55, 0, 0.15, -1.4] };   // right arm carry pose per tool: shoulder x, y, z, elbow
   function update(dt, s) {
     // s: { speed, sprint, swim, air, dead, gathering, sleeping, tired, hurt, slope, yawDiff, pitchLook, onStep }
     st.t += dt; const t = st.t, sp = s.speed;
@@ -492,8 +507,10 @@ export function createCharacter() {
       // ------- holding a tool in the right hand
       const holding = st.tool && st.tool !== 'none' && !s.sleeping && !s.swim;
       if (holding && !s.gathering) {
-        const pose = { stone_axe: [-0.45, -0.25, 0.22, -1.25], spear: [-0.35, 0.1, 0.25, -1.2], knife: [-0.4, 0, 0.18, -1.15], torch: [-0.7, -0.1, 0.18, -1.45], flare: [-0.7, -0.1, 0.18, -1.45], bottle: [-0.55, 0, 0.15, -1.4] }[st.tool] || [-0.4, 0, 0.15, -1.2];
-        set('shR', pose[0] + (moving ? Math.cos(ph) * 0.06 : 0), pose[1], pose[2]); set('elR', pose[3]); set('wrR', -0.1, 0, 0);
+        const pose = TOOL_POSE[st.tool] || [-0.4, 0, 0.15, -1.2];
+        // the carrying arm pumps in step with the legs (the motion-capture gait phase, left heel strike at 0), tucked tighter and swinging wider the faster he goes
+        const gp = model && model.motion ? model.motion.u * Math.PI * 2 : ph, pump = moving ? Math.cos(gp) : 0;
+        set('shR', pose[0] + pump * (0.05 + run * 0.2), pose[1], pose[2] + (moving ? run * 0.1 : 0)); set('elR', ...flexE('R', pose[3] - (moving ? run * 0.45 + Math.max(0, -pump) * run * 0.2 : 0))); set('wrR', ...flexE('R', -0.1));
         fingersCurl(arms[-1], 0.9, 0.7);
       } else if (!s.gathering) fingersCurl(arms[-1], 0.18 + (moving ? 0.2 : 0)); else fingersCurl(arms[-1], 0.5);
       fingersCurl(arms[1], 0.18 + (moving ? 0.25 + run * 0.4 : 0));
@@ -525,7 +542,7 @@ export function createCharacter() {
           add('spine', 0.18 * up, 0, 0); add('head', 0.22 * up, 0, 0);
         }
       } else if (act && act.kind === 'chop' && st.attackT < 0) {                                                         // ready stance between swings: feet apart, knees soft, balanced
-        set('shL', -0.5, 0.15, -0.2); set('elL', -0.9); add('spine', 0.12, 0.1, 0); add('hipL', -0.12, 0, 0.06); add('hipR', 0.1, 0, -0.06); add('kneeL', 0.18); add('kneeR', 0.14); st.dip = 0.04; pelvisY -= st.dip;
+        set('shL', -0.5, 0.15, -0.2); set('elL', ...flexE('L', -1.1)); add('spine', 0.12, 0.1, 0); add('hipL', -0.12, 0, 0.06); add('hipR', 0.1, 0, -0.06); add('kneeL', 0.18); add('kneeR', 0.14); st.dip = 0.04; pelvisY -= st.dip;
       }
       // ------- attack animations
       if (st.attackT >= 0) {
@@ -538,7 +555,7 @@ export function createCharacter() {
             const up = e(wind) * (1 - e(hit)), down = e(hit) * (1 - rec);
             set('shR', -3.05 * up + 0.35 * down - 0.3 * rec, -0.15 + up * 0.3, 0.3); set('elR', -0.5 - 0.95 * up + 0.35 * down); set('spine', 0.1 - 0.28 * up + 0.8 * down * (1 - rec), 0.4 * up - 0.6 * down); set('wrR', -0.7 * up + 0.7 * down); add('head', 0.2 * down, 0, 0);
             set('hipL', -0.4 * down - 0.1 * up); set('hipR', 0.3 * down + 0.1 * up); add('kneeL', 0.35 * down + 0.1 * up); add('kneeR', 0.25 * down); st.dip = 0.09 * down; pelvisY -= st.dip;
-            set('shL', -1.2 * up - 0.7 * down, -0.1, -0.35); set('elL', -0.9 - 0.5 * down); add('pelvis', 0, 0.2 * up - 0.3 * down, 0);          // off hand follows the haft, hips drive the swing
+            set('shL', -0.8 * up - 0.3 * down, 0.25, -0.25); set('elL', ...flexE('L', -1.25 - 0.3 * down)); add('pelvis', 0, 0.2 * up - 0.3 * down, 0);          // the free hand stays tucked in a loose fist and counter-balances, hips drive the swing
           } else if (kind === 'thrust') {
             const draw = e(wind) * (1 - e(hit)), stab = e(hit) * (1 - rec);
             set('shR', -0.3 + 0.7 * draw - 1.35 * stab, 0.2, 0.15); set('elR', -1.5 * draw - 0.2 * stab); set('spine', 0.1 + 0.28 * stab, 0.4 * draw - 0.6 * stab); set('hipL', -0.7 * stab); set('hipR', 0.45 * stab); pelvisY -= 0.06 * stab; set('shL', -0.6 * stab, 0, -0.5 * stab);
@@ -588,7 +605,7 @@ export function createCharacter() {
     _fq0.setFromAxisAngle(_fz, (side === 'L' ? -1 : 1) * 0.72); _fq1.copy(_fq0).invert().multiply(new THREE.Quaternion().setFromEuler(_fe.set(x, y, 0))).multiply(_fq0); _fe.setFromQuaternion(_fq1, 'XYZ'); return [_fe.x, _fe.y, _fe.z];
   };
   const DRINK = { sh: -1.9, shT: -0.15, shY: 0.8, shZ: 0.6, el: -1.0, wr: 0, wrT: -0.5, wrY: 0 };       // right-arm pose for drinking (shoulder, elbow, wrist)
-  const TOOL_ROLL = { knife: -0.35, stone_axe: 0.55, spear: 0.8, torch: 0.8, flare: 0.8, bottle: 0.8 };
+  const TOOL_ROLL = { knife: -0.35, stone_axe: 0.55, spear: 0.8, torch: 0.0, flare: 0.0, bottle: 0.8 };
   const mot = { mocapW: 0, procW: {}, lift: 0, curlR: 0.25, curlL: 0.25 };
   function updateAll(dt, s) {
     update2(dt, s);
@@ -606,7 +623,7 @@ export function createCharacter() {
       const pw = mot.procW; pw.upperarm_r = pw.lowerarm_r = pw.hand_r = st.rw; pw.upperarm_l = pw.lowerarm_l = pw.hand_l = st.uw; pw.spine_01 = pw.spine_02 = pw.spine_03 = st.uw * 0.9; pw.thigh_l = pw.thigh_r = pw.calf_l = pw.calf_r = st.lw; mot.drop = st.dip;
       mot.mocapW = st.mw; mot.lift = st.lift;
       // hands: a fist round the tool, otherwise a soft natural curl; a firmer grip on the crate lid; open hands when pinning a carcass
-      const actK = s.act && s.act.kind, gripR = holding ? 1 : actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.2 : 0.25, gripL = actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.1 : 0.25;
+      const actK = s.act && s.act.kind, gripR = holding ? (GRIP[st.tool] ?? 1) : actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.2 : 0.25, gripL = actK === 'crate' || actK === 'chop' ? 0.55 : attacking && holding ? 0.7 : actK === 'butcher' ? 0.1 : 0.25;
       const rollT = holding && !s.swim ? (TOOL_ROLL[st.tool] ?? 0.6) : 0; st.roll = (st.roll || 0) + (rollT - (st.roll || 0)) * k; mot.rollR = st.roll;
       st.cr = (st.cr ?? 0.25) + (gripR - (st.cr ?? 0.25)) * k; st.cl = (st.cl ?? 0.25) + (gripL - (st.cl ?? 0.25)) * k; mot.curlR = st.cr; mot.curlL = st.cl;
       if (st.mw > 0.5 && s.onStep && !s.swim && !s.air && (s.speed || 0) > 0.6) { const u = m.u; if (st.lastU > u) s.onStep(); else if (st.lastU < 0.5 && u >= 0.5) s.onStep(); st.lastU = u; } else st.lastU = m.u;   // footsteps on the mocap heel strikes
@@ -621,5 +638,5 @@ export function createCharacter() {
       if (st.lift > was + 0.004) { mot.lift = st.lift; model.sync(J, pelvis.position.y + st.lift, mot); }       // second pass so the lift lands on the same frame
     } else st.lift *= Math.exp(-dt * 8);
   }
-    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J };
+    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J, tune: { TOOL_POSE, TOOL_ROLL, GRIP } };
 }

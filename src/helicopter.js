@@ -15,8 +15,8 @@ export function createHelicopter() {
     model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; if (o.material.name === 'HeliGlass') { o.material.transparent = true; o.material.depthWrite = false; } o.material.envMapIntensity = 1.1; } });
     const blurMat = new THREE.MeshBasicMaterial({ color: 0x1a1f24, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false });
     const blur = new THREE.Mesh(new THREE.CircleGeometry(4.95, 40), blurMat); blur.rotation.x = -Math.PI / 2; blur.position.set(0, 2.52, 0.15); body.add(blur);
-    const tailBlur = new THREE.Mesh(new THREE.CircleGeometry(0.64, 20), blurMat.clone()); tailBlur.rotation.y = Math.PI / 2; tailBlur.position.set(0.14, 1.8, -6.78); body.add(tailBlur);
-    const strobe = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); strobe.position.set(0, 2.68, -6.92); body.add(strobe);
+    const tailBlur = new THREE.Mesh(new THREE.CircleGeometry(0.46, 24), blurMat.clone()); tailBlur.rotation.y = Math.PI / 2; tailBlur.position.set(0.0, 2.02, -6.62); body.add(tailBlur);
+    const strobe = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); strobe.position.set(0, 3.02, -6.88); body.add(strobe);
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff2c4 })); nose.position.set(0, 0.7, 2.7); body.add(nose);
     return { group: g, body, rotor, tailRotor, blur, tailBlur, strobe };
   }

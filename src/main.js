@@ -15,6 +15,7 @@ import { Structures } from './structures.js';
 import { Gameplay } from './gameplay.js';
 import { Intro } from './intro.js';
 import { loadHeroModel, loadHeroMotion } from './heroModel.js';
+import { loadToolModels } from './hero.js';
 import { loadAnimalModel, setFurCamera } from './animalGLB.js';
 import { loadHelicopterModel } from './helicopter.js';
 import { loadWreckModel } from './wreckScene.js';
@@ -38,7 +39,7 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 900);
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); if (post) post.setSize(innerWidth, innerHeight); });
+addEventListener('resize', () => { if (window.__filmSize) return; renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); if (post) post.setSize(innerWidth, innerHeight); });
 
 const ui = new UI();
 const ctl = new Controls(canvas);
@@ -47,7 +48,7 @@ const audio = new AudioEngine();
 const stats = new Stats();
 const inv = new Inventory();
 let world, sky, player, animals, structures, gameplay, intro, map, post, fx;
-let menuAngle = 0, lastSave = 0, deadT = 0, wakeFade = 0, mapTick = 0, miniTick = 0, shoreTimer = 0, revealT = 0, lastAttacker = '';
+let capT = 0, tipShown = false, menuAngle = 0, lastSave = 0, deadT = 0, wakeFade = 0, mapTick = 0, miniTick = 0, shoreTimer = 0, revealT = 0, lastAttacker = '';
 const audioCtx = { day: 1, night: 0, jungle: 1, water: 0, lake: 0, fire: 0, windy: 0, health: 100 };
 const clock = new THREE.Clock();
 const _v = new THREE.Vector3();
@@ -105,6 +106,7 @@ async function build() {
   ui.on.setting = (k, v) => applySetting(k, v);
   ui.on.pause = () => { if (G.state === 'play' && !G.paused) { if (ctl.touchReset) ctl.touchReset(); G.paused = true; ui.showPause(true); ctl.unlock(); } };
   ui.on.openSettings = () => { if (G.state === 'play') { if (!G.paused) { G.paused = true; ui.showPause(true); } ctl.unlock(); ui.openPanel('settings'); } };
+  ui.on.capture = () => ctl.lock();
   ui.on.photo = () => { photoReq = true; ui.toast('Photo saved'); };
   for (const k of Object.keys(ui.settings)) applySetting(k, ui.settings[k]);
   document.getElementById('compass').style.display = ui.settings.compass ? '' : 'none';
@@ -115,7 +117,7 @@ async function build() {
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !G.paused && !G.modal) ui.on.pause(); });
   ui.showMenu(hasSave());
   await loadStep('Ready', 100); const ld = document.getElementById('loading'); if (ld) { ld.classList.add('out'); setTimeout(() => ld.remove(), 800); }
-  if (import.meta.env.DEV || location.search.includes('debug')) window.game = { fx, post, G, world, player, stats, inv, animals, structures, gameplay, intro, sky, camera, ui, audio, map, scene, renderer, save, startNew, ctl, advance };
+  if (import.meta.env.DEV || location.search.includes('debug')) window.game = { fx, post, G, world, player, stats, inv, animals, structures, gameplay, intro, sky, camera, ui, audio, map, scene, renderer, save, startNew, ctl, advance, filmResize, filmTick, beginPlay, audioCtx };
 }
 
 // ------------------------------------------------------------------ state changes
@@ -257,7 +259,14 @@ function step(dt, t) {
   }
 
   // ---------- play
-  if (G.paused) return;
+  if (G.paused) { ui.showCapture(false); document.body.classList.remove('nocursor'); return; }
+  ctl.wantLock = !G.modal && !gameplay.sleepSeq;
+  if (!ctl.touch) {
+    ui.showCapture(ctl.wantLock);
+    document.body.classList.toggle('nocursor', ctl.wantLock && ctl.noLock);
+    ctl.edgeTick(dt);
+    if (ctl.noLock && ctl.hit('Escape') && !G.modal) { ui.on.pause(); return; }
+  }
   if (ctl.hit('Tab')) togglePanel('inventory'); if (ctl.hit('KeyC')) togglePanel('craft'); if (ctl.hit('KeyM')) togglePanel('map');
   if (ctl.hit('Escape') && G.modal) ui.requestClose();
   if (ctl.hit('KeyH')) ui.toggleHints();
@@ -322,8 +331,18 @@ function advance(sec, hold = {}) {
   renderFrame(1 / 30, simT); takePhoto();
 }
 
+// ---- film capture (debug only): fixed-timestep stepping so a video can be recorded frame by frame
+function filmResize(w, h) { window.__filmSize = [w, h]; renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (post) post.setSize(w, h); }
+function filmTick(dt = 1 / 30, down = [], hit = [], camFn = null) {
+  window.__film = true; if (window.__filmSize && (canvas.width !== window.__filmSize[0] || canvas.height !== window.__filmSize[1])) filmResize(...window.__filmSize);
+  ctl.keys = new Set(down); for (const k of hit) ctl.pressed.add(k);
+  if (G.paused) { G.paused = false; ui.showPause(false); }
+  simT += dt; setFurCamera(camera.position); step(dt, simT); if (camFn) camFn(camera, dt); renderFrame(dt, simT); ctl.endFrame();
+}
+
 function frame() {
   requestAnimationFrame(frame);
+  if (window.__film) return;
   const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05);
   if (G.state === 'play' && !G.paused) updateDRS(rawDt);
   setFurCamera(camera.position);
@@ -339,6 +358,7 @@ function frame() {
 setTimeout(async () => {
   await loadStep('Loading characters and animals', 4);
   try { await loadHeroMotion(MODELS + 'hero_motion.json'); } catch (e) { console.warn('hero motion failed, using procedural walk', e); }
+  try { await loadToolModels(MODELS + 'tools.glb'); } catch (e) { console.warn('tool models failed, using procedural tools', e); }
   try { await loadHeroModel(MODELS + 'survivor.glb'); } catch (e) { console.warn('hero model failed, using procedural hero', e); }
   try { await loadWreckModel(MODELS + 'helicopter_wreck.glb'); } catch (e) { console.warn('wreck model failed', e); }
   try { await loadHelicopterModel(MODELS + 'helicopter.glb'); } catch (e) { console.warn('helicopter model failed, using procedural helicopter', e); }

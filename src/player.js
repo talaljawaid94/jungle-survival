@@ -36,7 +36,8 @@ export class Player {
     this.swimming = ground < -0.75;
     const wading = ground < -0.05 && !this.swimming;
     this.sprinting = ableToMove && this.moving && ctl.down('ShiftLeft') && stats.energy > 4 && !this.swimming;
-    let target = this.swimming ? 2.3 : this.sprinting ? 7.2 : 3.9;
+    this.strolling = ableToMove && this.moving && ctl.down('AltLeft') && !this.sprinting && !this.swimming;      // hold Alt to walk slowly (plays the walk cycle instead of the jog)
+    let target = this.swimming ? 2.3 : this.sprinting ? 7.2 : this.strolling ? 1.9 : 3.9;
     if (wading) target *= 0.72;
     if (stats.energy < 8) target *= 0.8; if (stats.sick > 0) target *= 0.88; if (stats.health < 20) target *= 0.85;
     const slope = world.slopeAt(this.pos.x, this.pos.z); if (slope > 0.55 && !this.swimming) target *= 0.8;
@@ -85,7 +86,8 @@ export class Player {
       const tl = tools[n]; if (!tl || !tl.userData.light) continue;
       const on = n === 'torch' ? this.equippedId === 'torch' : false;
       tl.userData.light.intensity = on ? (n === 'torch' ? 8 : 12) * (0.85 + Math.random() * 0.3) : 0;
-      if (tl.userData.flame) { tl.userData.flame.visible = on || n === 'torch' ? on : false; if (on) tl.userData.flame.scale.setScalar(0.9 + Math.random() * 0.3); }
+      if (tl.userData.flame) { tl.userData.flame.visible = on || n === 'torch' ? on : false; if (on) tl.userData.flame.scale.set(0.9 + Math.random() * 0.25, 0.85 + Math.random() * 0.45, 0.9 + Math.random() * 0.25); }
+      if (tl.userData.glow) for (const m of tl.userData.glow) m.emissiveIntensity = on ? 0.16 + Math.random() * 0.1 : 0;
     }
     this.flareLight.intensity = this.flareT > 0 ? 14 * (0.85 + Math.random() * 0.3) : 0;
     char.group.position.copy(this.pos); char.group.rotation.y = this.heading;

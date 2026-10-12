@@ -104,7 +104,10 @@ def _mat_vcol(name, tex=None, rough=0.85, layer='Col'):
 
 def _flat(name, color, rough=0.5, metal=0.0):
     m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal; return m
+    b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = metal
+    try: b.inputs['Specular IOR Level'].default_value = 0.15
+    except Exception: pass
+    return m
 
 def _vcol_solid(obj, rgb_outer, rgb_inner=None, name='Col'):
     me = obj.data; col = me.color_attributes.new(name, 'BYTE_COLOR', 'POINT')

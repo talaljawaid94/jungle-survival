@@ -68,8 +68,17 @@ export function createModelRig(tools) {
   for (const side of ['l', 'r']) FING[side] = ['index', 'middle', 'ring', 'pinky'].map((f) => ({ k: f === 'pinky' ? 1.15 : f === 'ring' ? 1.05 : 1.0, j: [1, 2, 3].map((n) => bones[`${f}_0${n}_${side}`]).filter(Boolean).map((b) => ({ b, q0: b.quaternion.clone() })) }));
   const THUMB = { r: ['thumb_01_r', 'thumb_02_r', 'thumb_03_r'].map((n) => bones[n]).filter(Boolean).map((b) => ({ b, q0: b.quaternion.clone() })), l: ['thumb_01_l', 'thumb_02_l', 'thumb_03_l'].map((n) => bones[n]).filter(Boolean).map((b) => ({ b, q0: b.quaternion.clone() })) };
   const ANG = [0.9, 1.25, 0.95];
+  // hand shaping (tunable live through window.__hand for dev): the relaxed curl cascades from a loose index to a tighter pinky, the fingers close together
+  // instead of fanning out, and the first joints keep a little extra bend so the hand never looks flat
+  const HT = (typeof window !== 'undefined' && (window.__hand ||= { splay: 0.35, casc: 0.5, base: 0.1, sx: 1, axis: [0, 0, 1] })) || { splay: 0.35, casc: 0.5, base: 0.1, sx: 1, axis: [0, 0, 1] }, FXa = new THREE.Vector3(0, 0, 1), FQ2 = new THREE.Quaternion();
+  const SPL = { index: 1, middle: 0.15, ring: -0.6, pinky: -1.2 }, CAS = { index: -1, middle: -0.3, ring: 0.4, pinky: 1 };
   const curl = (side, c) => {
-    for (const f of FING[side]) f.j.forEach((x, i) => { x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * f.k * ANG[i])); });
+    for (const f of FING[side]) f.j.forEach((x, i) => {
+      const nm = x.b.name.split('_')[0], relax = 1 - Math.min(1, c * 1.4);                                    // 1 for an open/relaxed hand, 0 for a fist
+      const cc = c * f.k * ANG[i] * (1 + HT.casc * CAS[nm] * relax) + (i === 0 ? HT.base * relax : 0);
+      x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * cc));
+      if (i === 0 && HT.splay) { if (HT.axis) FXa.set(HT.axis[0], HT.axis[1], HT.axis[2]); x.b.quaternion.multiply(FQ2.setFromAxisAngle(FXa, HT.sx * HT.splay * SPL[nm] * relax * (side === 'l' ? -1 : 1))); }
+    });
     THUMB[side].forEach((x, i) => { if (x.qf) x.b.quaternion.copy(x.q0).slerp(x.qf, Math.min(1, c * 1.05)); else x.b.quaternion.copy(x.q0).multiply(FQ.setFromAxisAngle(FZ, (side === 'l' ? -1 : 1) * c * [0.25, 0.5, 0.5][i])); });
   };
   // fit the grip point: close the fist once and put the handle in the middle of the cavity the fingers form

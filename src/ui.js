@@ -62,7 +62,8 @@ const TEMPLATE = `
   <div id="hints" class="glass">
     <div><b>W</b><b>A</b><b>S</b><b>D</b> Move &nbsp; <b>Shift</b> Sprint &nbsp; <b>Space</b> Jump</div>
     <div><b>E</b> Hold to interact &nbsp; <b>Click</b> Attack &nbsp; <b>F</b> Use item</div>
-    <div><b>Tab</b> Bag &nbsp; <b>C</b> Craft &nbsp; <b>M</b> Map &nbsp; <b>Z</b> Sleep &nbsp; <b>H</b> Hide hints</div>
+    <div><b>Tab</b> Bag &nbsp; <b>C</b> Craft &nbsp; <b>M</b> Map &nbsp; <b>Z</b> Sleep &nbsp; <b>Esc</b> Pause</div>
+    <div><b>P</b> Photo &nbsp; <b>K</b> Sound &nbsp; <b>H</b> Hide hints</div>
   </div>
   <button id="hintBtn" class="glass"><b style="margin-right:6px">H</b> Controls</button>
 </div>
@@ -93,6 +94,7 @@ const TEMPLATE = `
     <button id="btnContinue" class="mbtn hidden">${icon('compass', 22)} Continue</button>
     <button id="btnNew" class="mbtn primary">${icon('campfire', 22)} New game</button>
     <button id="btnSettings" class="mbtn">${icon('cog', 22)} Settings</button>
+    <div class="mhint">${isTouch ? 'Best in landscape · left thumb moves, right thumb looks' : 'Move the mouse to look around · press <kbd>Esc</kbd> any time to use your cursor'}</div>
   </div>
   <div class="ver">FIRST PREVIEW · v0.3</div>
 </div>
@@ -117,6 +119,7 @@ const TEMPLATE = `
     <button id="btnDeadMenu" class="mbtn">${icon('close', 22)} Main menu</button>
   </div>
 </div>
+<div id="capture" class="hidden"><kbd>Esc</kbd><span>Use mouse</span></div>
 <div id="skipHint"><kbd>${isTouch ? 'Tap' : 'Space'}</kbd><span>Skip intro</span></div>
 <div id="tip" class="glass"></div>
 `;
@@ -161,7 +164,7 @@ export class UI {
     $('hintBtn').onclick = () => this.toggleHints();
     if (CUSTOM_ICON_COUNT) { const v = this.$('menu').querySelector('.ver'); if (v) v.innerHTML += ' · ICONS FROM <a href="https://www.flaticon.com" target="_blank" rel="noopener" style="color:inherit">FLATICON</a>'; }
     this.$('muteBtn').onclick = () => this.setSetting('muted', !this.settings.muted); this.updateMuteBtn();
-    $('btnHudPause').onclick = () => this.on.pause && this.on.pause(); $('btnHudSettings').onclick = () => this.on.openSettings && this.on.openSettings(); $('btnPhoto').onclick = () => this.on.photo && this.on.photo();
+    $('capture').onclick = () => this.on.capture && this.on.capture(); $('btnHudPause').onclick = () => this.on.pause && this.on.pause(); $('btnHudSettings').onclick = () => this.on.openSettings && this.on.openSettings(); $('btnPhoto').onclick = () => this.on.photo && this.on.photo();
     this.hintsOn = this.settings.hints; this.$('hints').classList.toggle('off', !this.hintsOn);
   }
 
@@ -180,6 +183,7 @@ export class UI {
       this.$('pauseStats').innerHTML = row('heart', '#ff6f61', s.health) + row('food', '#f6a844', s.hunger) + row('drop', '#5cc4f4', s.thirst) + row('bolt', '#f4d84e', s.energy);
     }
   }
+  showCapture(on) { if (this._cap !== on) { this._cap = on; this.$('capture').classList.toggle('hidden', !on); } }
   showSkip(on) { this.$('skipHint').classList.toggle('on', !!on); }
   showDead(day, cause) { this.$('dead').classList.remove('hidden'); this.$('deadDay').textContent = day; this.$('deadCause').textContent = cause; }
   hideDead() { this.$('dead').classList.add('hidden'); }
