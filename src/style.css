@@ -458,7 +458,7 @@ body.nocursor #c { cursor: none; }
 .mhint { margin-top: 10px; max-width: 360px; text-align: center; font: 500 12.5px/1.45 var(--game); color: #b6d0d6; } .mhint kbd { font: 700 10.5px var(--game); padding: 1px 7px 2px; border-radius: 7px; background: #0c2c35; border: 1.5px solid var(--gold); color: #fff; }
 
 /* desktop: the cursor is captured while playing, so click-only buttons are hidden (Esc / P / K cover them) */
-html:not(.touch) #sideBtns { display: none; }
+html:not(.touch) #sideBtns, .touch #sideBtns { display: none; }
 #menu .col { margin-bottom: 34px; }
 /* narrow desktop windows / tablets: keep the hotbar clear of the action buttons and the Esc cue */
 @media (min-width: 601px) and (max-width: 1000px) and (min-height: 561px) {
