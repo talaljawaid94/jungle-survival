@@ -3,7 +3,7 @@ import './style.css';
 import { G, DAY_SECONDS } from './game.js';
 import { World, R } from './world.js';
 import { Sky } from './sky.js';
-import { Controls } from './controls.js';
+import { Controls, isTouch } from './controls.js';
 import { initTouch } from './touch.js';
 import { AudioEngine } from './audio.js';
 import { UI } from './ui.js';
@@ -278,7 +278,7 @@ function step(dt, t) {
   while (G.time >= 24) { G.time -= 24; G.day++; }
 
   if (ctl.touchTick) ctl.touchTick();
-  if (player.char.setLift) player.char.setLift(0.04 + 0.16 * sky.daylight);       // keep the survivor readable in shade and at dusk
+  if (player.char.setLift) player.char.setLift(isTouch ? 0.08 + 0.3 * sky.daylight : 0.04 + 0.16 * sky.daylight);       // keep the survivor readable in shade and at dusk (phones get more: some mobile GPUs lose the reflected sky light and he went near-black)
   player.update(dt, ctl, world, stats, audio, locked);
   gameplay.update(dt, ctl, locked);
   const resting = !player.moving && (structures.firesNear(player.pos.x, player.pos.z, 6) || structures.nearestShelter(player.pos.x, player.pos.z, 4)) && stats.energy < 100;
