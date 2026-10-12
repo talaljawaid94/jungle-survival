@@ -426,6 +426,7 @@ export function createCharacter() {
   const add = (name, x = 0, y = 0, z = 0) => { const j = J[name]; if (j) { j.tx += x; j.ty += y; j.tz += z; } };
   const fingersCurl = (arm, c, thumb = c) => { for (const f of arm.hand.fingers) { f.f1.rotation.x = c * 1.15; f.f2.rotation.x = c * 1.35; } arm.hand.thumb.t1.rotation.x = thumb * 0.5; arm.hand.thumb.t2.rotation.x = thumb * 0.8; };
 
+  const GRIP = { torch: 1, flare: 1 };      // fist closure per tool (1 = fully closed)
   const TOOL_POSE = { stone_axe: [-0.3, -0.25, 0.22, -0.9], spear: [-0.35, 0.1, 0.25, -1.2], knife: [-0.4, 0, 0.18, -1.15], torch: [-0.5, -0.1, 0.42, -1.05], flare: [-0.5, -0.1, 0.42, -1.05], bottle: [-0.55, 0, 0.15, -1.4] };   // right arm carry pose per tool: shoulder x, y, z, elbow
   function update(dt, s) {
     // s: { speed, sprint, swim, air, dead, gathering, sleeping, tired, hurt, slope, yawDiff, pitchLook, onStep }
@@ -622,7 +623,7 @@ export function createCharacter() {
       const pw = mot.procW; pw.upperarm_r = pw.lowerarm_r = pw.hand_r = st.rw; pw.upperarm_l = pw.lowerarm_l = pw.hand_l = st.uw; pw.spine_01 = pw.spine_02 = pw.spine_03 = st.uw * 0.9; pw.thigh_l = pw.thigh_r = pw.calf_l = pw.calf_r = st.lw; mot.drop = st.dip;
       mot.mocapW = st.mw; mot.lift = st.lift;
       // hands: a fist round the tool, otherwise a soft natural curl; a firmer grip on the crate lid; open hands when pinning a carcass
-      const actK = s.act && s.act.kind, gripR = holding ? 1 : actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.2 : 0.25, gripL = actK === 'crate' || actK === 'chop' ? 0.55 : attacking && holding ? 0.7 : actK === 'butcher' ? 0.1 : 0.25;
+      const actK = s.act && s.act.kind, gripR = holding ? (GRIP[st.tool] ?? 1) : actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.2 : 0.25, gripL = actK === 'crate' || actK === 'chop' ? 0.55 : attacking && holding ? 0.7 : actK === 'butcher' ? 0.1 : 0.25;
       const rollT = holding && !s.swim ? (TOOL_ROLL[st.tool] ?? 0.6) : 0; st.roll = (st.roll || 0) + (rollT - (st.roll || 0)) * k; mot.rollR = st.roll;
       st.cr = (st.cr ?? 0.25) + (gripR - (st.cr ?? 0.25)) * k; st.cl = (st.cl ?? 0.25) + (gripL - (st.cl ?? 0.25)) * k; mot.curlR = st.cr; mot.curlL = st.cl;
       if (st.mw > 0.5 && s.onStep && !s.swim && !s.air && (s.speed || 0) > 0.6) { const u = m.u; if (st.lastU > u) s.onStep(); else if (st.lastU < 0.5 && u >= 0.5) s.onStep(); st.lastU = u; } else st.lastU = m.u;   // footsteps on the mocap heel strikes
@@ -637,5 +638,5 @@ export function createCharacter() {
       if (st.lift > was + 0.004) { mot.lift = st.lift; model.sync(J, pelvis.position.y + st.lift, mot); }       // second pass so the lift lands on the same frame
     } else st.lift *= Math.exp(-dt * 8);
   }
-    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J, tune: { TOOL_POSE, TOOL_ROLL } };
+    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J, tune: { TOOL_POSE, TOOL_ROLL, GRIP } };
 }
