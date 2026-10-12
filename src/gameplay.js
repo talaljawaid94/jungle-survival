@@ -76,7 +76,7 @@ export class Gameplay {
           break;
         }
         case 'tree':
-          if (tool && tool.chop > 0) consider('i' + o.id, o.x, o.z, 2.6, 'Chop tree', Math.max(2.2, 3.2 / tool.chop), () => { this.give('log', 3); this.give('stick', 2); this.fx.fallTree(o, p.pos.x, p.pos.z); w.removeItem(o); }, { act: 'chop', every: 0.8, tick: () => { this.audio.chop(); this.player.char.attack(); this.fx.chips(o.x + (p.pos.x - o.x) * 0.4, o.y + 1.1, o.z + (p.pos.z - o.z) * 0.4); this.fx.shake(0.04); } });
+          if (tool && tool.chop > 0) consider('i' + o.id, o.x, o.z, 2.6, 'Chop tree', Math.max(2.2, 3.2 / tool.chop), () => { this.give('log', 3); this.give('stick', 2); this.fx.fallTree(o, p.pos.x, p.pos.z); w.removeItem(o); }, { act: 'chop', every: 0.8, tick: () => { this.player.char.attack(); this.audio.chop(0.24); this.later(0.24, () => { this.fx.chips(o.x + (p.pos.x - o.x) * 0.4, o.y + 1.1, o.z + (p.pos.z - o.z) * 0.4); this.fx.shake(0.04); }); } });
           else consider('t' + o.id, o.x, o.z, 2.6, 'Chopping needs an axe or knife (equip it)', 0, null);
           break;
         case 'crate':
@@ -131,7 +131,9 @@ export class Gameplay {
   }
 
   // ------------------------------------------------------------------ per frame
+  later(sec, fn) { (this.timers ||= []).push({ t: sec, fn }); }            // run something after sec of game time (e.g. when the axe actually lands)
   update(dt, ctl, locked) {
+    if (this.timers) for (let i = this.timers.length - 1; i >= 0; i--) { const m = this.timers[i]; if ((m.t -= dt) <= 0) { this.timers.splice(i, 1); m.fn(); } }
     this.atkCd -= dt;
     if (this.sleepSeq) { this.updateSleep(dt); return; }
     // hotbar select

@@ -426,6 +426,7 @@ export function createCharacter() {
   const add = (name, x = 0, y = 0, z = 0) => { const j = J[name]; if (j) { j.tx += x; j.ty += y; j.tz += z; } };
   const fingersCurl = (arm, c, thumb = c) => { for (const f of arm.hand.fingers) { f.f1.rotation.x = c * 1.15; f.f2.rotation.x = c * 1.35; } arm.hand.thumb.t1.rotation.x = thumb * 0.5; arm.hand.thumb.t2.rotation.x = thumb * 0.8; };
 
+  const TOOL_POSE = { stone_axe: [-0.3, -0.25, 0.22, -0.9], spear: [-0.35, 0.1, 0.25, -1.2], knife: [-0.4, 0, 0.18, -1.15], torch: [-0.5, -0.1, 0.42, -1.05], flare: [-0.5, -0.1, 0.42, -1.05], bottle: [-0.55, 0, 0.15, -1.4] };   // right arm carry pose per tool: shoulder x, y, z, elbow
   function update(dt, s) {
     // s: { speed, sprint, swim, air, dead, gathering, sleeping, tired, hurt, slope, yawDiff, pitchLook, onStep }
     st.t += dt; const t = st.t, sp = s.speed;
@@ -505,8 +506,10 @@ export function createCharacter() {
       // ------- holding a tool in the right hand
       const holding = st.tool && st.tool !== 'none' && !s.sleeping && !s.swim;
       if (holding && !s.gathering) {
-        const pose = { stone_axe: [-0.45, -0.25, 0.22, -1.25], spear: [-0.35, 0.1, 0.25, -1.2], knife: [-0.4, 0, 0.18, -1.15], torch: [-0.7, -0.1, 0.18, -1.45], flare: [-0.7, -0.1, 0.18, -1.45], bottle: [-0.55, 0, 0.15, -1.4] }[st.tool] || [-0.4, 0, 0.15, -1.2];
-        set('shR', pose[0] + (moving ? Math.cos(ph) * 0.06 : 0), pose[1], pose[2]); set('elR', pose[3]); set('wrR', -0.1, 0, 0);
+        const pose = TOOL_POSE[st.tool] || [-0.4, 0, 0.15, -1.2];
+        // the carrying arm pumps in step with the legs (the motion-capture gait phase, left heel strike at 0), tucked tighter and swinging wider the faster he goes
+        const gp = model && model.motion ? model.motion.u * Math.PI * 2 : ph, pump = moving ? Math.cos(gp) : 0;
+        set('shR', pose[0] + pump * (0.05 + run * 0.2), pose[1], pose[2] + (moving ? run * 0.1 : 0)); set('elR', ...flexE('R', pose[3] - (moving ? run * 0.45 + Math.max(0, -pump) * run * 0.2 : 0))); set('wrR', ...flexE('R', -0.1));
         fingersCurl(arms[-1], 0.9, 0.7);
       } else if (!s.gathering) fingersCurl(arms[-1], 0.18 + (moving ? 0.2 : 0)); else fingersCurl(arms[-1], 0.5);
       fingersCurl(arms[1], 0.18 + (moving ? 0.25 + run * 0.4 : 0));
@@ -538,7 +541,7 @@ export function createCharacter() {
           add('spine', 0.18 * up, 0, 0); add('head', 0.22 * up, 0, 0);
         }
       } else if (act && act.kind === 'chop' && st.attackT < 0) {                                                         // ready stance between swings: feet apart, knees soft, balanced
-        set('shL', -0.5, 0.15, -0.2); set('elL', -0.9); add('spine', 0.12, 0.1, 0); add('hipL', -0.12, 0, 0.06); add('hipR', 0.1, 0, -0.06); add('kneeL', 0.18); add('kneeR', 0.14); st.dip = 0.04; pelvisY -= st.dip;
+        set('shL', -0.5, 0.15, -0.2); set('elL', ...flexE('L', -1.1)); add('spine', 0.12, 0.1, 0); add('hipL', -0.12, 0, 0.06); add('hipR', 0.1, 0, -0.06); add('kneeL', 0.18); add('kneeR', 0.14); st.dip = 0.04; pelvisY -= st.dip;
       }
       // ------- attack animations
       if (st.attackT >= 0) {
@@ -551,7 +554,7 @@ export function createCharacter() {
             const up = e(wind) * (1 - e(hit)), down = e(hit) * (1 - rec);
             set('shR', -3.05 * up + 0.35 * down - 0.3 * rec, -0.15 + up * 0.3, 0.3); set('elR', -0.5 - 0.95 * up + 0.35 * down); set('spine', 0.1 - 0.28 * up + 0.8 * down * (1 - rec), 0.4 * up - 0.6 * down); set('wrR', -0.7 * up + 0.7 * down); add('head', 0.2 * down, 0, 0);
             set('hipL', -0.4 * down - 0.1 * up); set('hipR', 0.3 * down + 0.1 * up); add('kneeL', 0.35 * down + 0.1 * up); add('kneeR', 0.25 * down); st.dip = 0.09 * down; pelvisY -= st.dip;
-            set('shL', -1.2 * up - 0.7 * down, -0.1, -0.35); set('elL', -0.9 - 0.5 * down); add('pelvis', 0, 0.2 * up - 0.3 * down, 0);          // off hand follows the haft, hips drive the swing
+            set('shL', -0.8 * up - 0.3 * down, 0.25, -0.25); set('elL', ...flexE('L', -1.25 - 0.3 * down)); add('pelvis', 0, 0.2 * up - 0.3 * down, 0);          // the free hand stays tucked in a loose fist and counter-balances, hips drive the swing
           } else if (kind === 'thrust') {
             const draw = e(wind) * (1 - e(hit)), stab = e(hit) * (1 - rec);
             set('shR', -0.3 + 0.7 * draw - 1.35 * stab, 0.2, 0.15); set('elR', -1.5 * draw - 0.2 * stab); set('spine', 0.1 + 0.28 * stab, 0.4 * draw - 0.6 * stab); set('hipL', -0.7 * stab); set('hipR', 0.45 * stab); pelvisY -= 0.06 * stab; set('shL', -0.6 * stab, 0, -0.5 * stab);
@@ -601,7 +604,7 @@ export function createCharacter() {
     _fq0.setFromAxisAngle(_fz, (side === 'L' ? -1 : 1) * 0.72); _fq1.copy(_fq0).invert().multiply(new THREE.Quaternion().setFromEuler(_fe.set(x, y, 0))).multiply(_fq0); _fe.setFromQuaternion(_fq1, 'XYZ'); return [_fe.x, _fe.y, _fe.z];
   };
   const DRINK = { sh: -1.9, shT: -0.15, shY: 0.8, shZ: 0.6, el: -1.0, wr: 0, wrT: -0.5, wrY: 0 };       // right-arm pose for drinking (shoulder, elbow, wrist)
-  const TOOL_ROLL = { knife: -0.35, stone_axe: 0.55, spear: 0.8, torch: 0.8, flare: 0.8, bottle: 0.8 };
+  const TOOL_ROLL = { knife: -0.35, stone_axe: 0.55, spear: 0.8, torch: 0.0, flare: 0.0, bottle: 0.8 };
   const mot = { mocapW: 0, procW: {}, lift: 0, curlR: 0.25, curlL: 0.25 };
   function updateAll(dt, s) {
     update2(dt, s);
@@ -619,7 +622,7 @@ export function createCharacter() {
       const pw = mot.procW; pw.upperarm_r = pw.lowerarm_r = pw.hand_r = st.rw; pw.upperarm_l = pw.lowerarm_l = pw.hand_l = st.uw; pw.spine_01 = pw.spine_02 = pw.spine_03 = st.uw * 0.9; pw.thigh_l = pw.thigh_r = pw.calf_l = pw.calf_r = st.lw; mot.drop = st.dip;
       mot.mocapW = st.mw; mot.lift = st.lift;
       // hands: a fist round the tool, otherwise a soft natural curl; a firmer grip on the crate lid; open hands when pinning a carcass
-      const actK = s.act && s.act.kind, gripR = holding ? 1 : actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.2 : 0.25, gripL = actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.1 : 0.25;
+      const actK = s.act && s.act.kind, gripR = holding ? 1 : actK === 'crate' ? 0.55 : actK === 'butcher' ? 0.2 : 0.25, gripL = actK === 'crate' || actK === 'chop' ? 0.55 : attacking && holding ? 0.7 : actK === 'butcher' ? 0.1 : 0.25;
       const rollT = holding && !s.swim ? (TOOL_ROLL[st.tool] ?? 0.6) : 0; st.roll = (st.roll || 0) + (rollT - (st.roll || 0)) * k; mot.rollR = st.roll;
       st.cr = (st.cr ?? 0.25) + (gripR - (st.cr ?? 0.25)) * k; st.cl = (st.cl ?? 0.25) + (gripL - (st.cl ?? 0.25)) * k; mot.curlR = st.cr; mot.curlL = st.cl;
       if (st.mw > 0.5 && s.onStep && !s.swim && !s.air && (s.speed || 0) > 0.6) { const u = m.u; if (st.lastU > u) s.onStep(); else if (st.lastU < 0.5 && u >= 0.5) s.onStep(); st.lastU = u; } else st.lastU = m.u;   // footsteps on the mocap heel strikes
@@ -634,5 +637,5 @@ export function createCharacter() {
       if (st.lift > was + 0.004) { mot.lift = st.lift; model.sync(J, pelvis.position.y + st.lift, mot); }       // second pass so the lift lands on the same frame
     } else st.lift *= Math.exp(-dt * 8);
   }
-    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J };
+    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J, tune: { TOOL_POSE, TOOL_ROLL } };
 }

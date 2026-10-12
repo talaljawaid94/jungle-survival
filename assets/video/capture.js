@@ -12,6 +12,12 @@ export function install(g, opt = {}) {
     const c = document.getElementById('c'), url = c.toDataURL('image/jpeg', F.q), blob = await (await fetch(url)).blob();
     const r = await fetch('http://localhost:5190/' + name, { method: 'POST', body: blob }); return r.ok;
   };
+  // sound events fired by the game (axe strikes, footsteps, crafting...) are logged with the shot and frame they happen on, for the offline soundtrack
+  F.ev = [];
+  for (const k of Object.getOwnPropertyNames(Object.getPrototypeOf(g.audio))) {
+    if (typeof g.audio[k] !== 'function' || ['constructor', 'init', 'resume', 'setVolume', 'setMuted', 'update', 'noise', 'tone', '_pan', 'crackle'].includes(k)) continue;
+    g.audio[k] = (...a) => { F.ev.push([k, F.cur < F.shots.length ? F.shots[F.cur].name : '?', F.fi, ...a.filter((x) => typeof x === 'number')]); };
+  }
   const tick = (down, hit, cam) => g.filmTick(1 / 30, down || [], hit || [], cam || null);
   const ease = (t) => t * t * (3 - 2 * t), clamp = (t) => Math.max(0, Math.min(1, t)), lerp = (a, b, t) => a + (b - a) * t;
   const P = () => g.player, W = () => g.world, crash = () => g.world.crash;
@@ -77,19 +83,27 @@ export function install(g, opt = {}) {
         this.b = best; face(best.sx, best.sz, best.sx + Math.sin(best.hd), best.sz + Math.cos(best.hd)); settle(8, (cc) => cams.rel(cc, -3, 2.6, 1.0, 0, 1.0)); },
       tick(i) { const t = i / 95; tick(['KeyW', 'ShiftLeft'], [], (c) => cams.rel(c, lerp(-3.8, -2.6, t), lerp(2.2, 3.4, t), lerp(0.7, 1.2, t), 0.5, 1.0, 46)); } },
 
-    { name: 'E', frames: 112, setup() {          // chopping a tree with the axe, golden hour
+    { name: 'E', frames: 150, setup() {          // chopping a tree with the axe, golden hour
         beginAt(17.5); const o = g.world.items[426]; this.o = o; g.gameplay.select(give('stone_axe'));
         face(o.x - 1.25, o.z, o.x, o.z); P().char.group.visible = true; const px = o.x - 1.25;
-        const A = clearAngle(px, o.z, 3.4, Math.PI / 2), B = clearAngle(px, o.z, 3.4, -Math.PI / 2); this.ca = (A.score >= B.score ? A : B).a; this.sd = 3.4; settle(10, null); },
-      tick(i) { const o = this.o, t = i / 112, a = this.ca + lerp(-0.1, 0.1, t); tick(i >= 6 && i < 106 ? ['KeyE'] : [], i === 6 ? ['KeyE'] : [], (c) => cams.ag(c, o.x - 1.25 + Math.cos(a) * this.sd, 1.5, o.z + Math.sin(a) * this.sd, o.x - 1.0, 1.3, o.z, 40)); } },
+        const A = clearAngle(px, o.z, 2.9, Math.PI / 2), B = clearAngle(px, o.z, 2.9, -Math.PI / 2); this.ca = (A.score >= B.score ? A : B).a; this.sd = 2.9; settle(10, null); },
+      tick(i) { const o = this.o, t = i / 150, a = this.ca + lerp(-0.1, 0.1, t); tick(i >= 6 && i < 144 ? ['KeyE'] : [], i === 6 ? ['KeyE'] : [], (c) => cams.ag(c, o.x - 1.25 + Math.cos(a) * this.sd, 1.4, o.z + Math.sin(a) * this.sd, o.x - 1.2, 1.15, o.z, 44)); } },
+
+    { name: 'K', frames: 120, setup() {          // building the campfire: the survivor crafts it on flat ground, sparks fly, the flames take
+        beginAt(18.3); const f = fireSpot(); this.f = f; g.gameplay.select(give('stone_axe')); face(f.x - 2.4, f.z, f.x, f.z); P().char.group.visible = true; this.ca = clearAngle(f.x - 1.2, f.z, 4.2, Math.PI / 2).a; settle(10, null); },
+      tick(i) { const f = this.f, t = i / 120, a = this.ca + lerp(-0.12, 0.12, t);
+        if (i === 18) g.gameplay.craft({ needs: {}, place: 'campfire' });
+        tick([], [], (c) => cams.ag(c, f.x - 1.2 + Math.cos(a) * 4.0, lerp(1.35, 1.0, ease(t)), f.z + Math.sin(a) * 4.0, f.x - 1.2, 0.95, f.z, lerp(40, 34, t))); } },
 
     { name: 'F', frames: 120, setup() {          // campfire at night, then a close-up of the torch
         beginAt(19.65); const f = fireSpot(); g.structures.placeCampfire(f.x, f.z, 9999); this.f = f; g.gameplay.select(give('torch')); face(f.x + 1.7, f.z + 0.3, f.x, f.z); P().char.group.visible = true; settle(60, (c) => cams.ag(c, f.x - 3.5, 1.0, f.z - 1, f.x + 1.2, 1.2, f.z + 0.3, 40)); },
-      tick(i) { const f = this.f, t = i / 120, a = lerp(-0.45, 0.35, ease(t)), k = ease(clamp((i - 52) / 30));
+      tick(i) { const f = this.f, t = i / 120, k = ease(clamp((i - 56) / 30));
         tick([], [], (c) => {
-          const wide = [f.x - Math.cos(a) * 3.6, gh(f.x, f.z) + lerp(0.85, 1.1, t), f.z - Math.sin(a) * 3.6], look = [f.x + 1.0, gh(f.x, f.z) + 1.15, f.z + 0.3];
-          const y = P().yaw, dx = Math.sin(y), dz = Math.cos(y), rx = -dz, rz = dx, p = P().pos, close = [p.x + dx * 1.45 - rx * 0.35, p.y + 1.55, p.z + dz * 1.45 - rz * 0.35], tl = [p.x + dx * 0.3 + rx * 0.3, p.y + 1.45, p.z + dz * 0.3 + rz * 0.3];
-          c.position.set(lerp(wide[0], close[0], k), lerp(wide[1], close[1], k), lerp(wide[2], close[2], k)); c.lookAt(lerp(look[0], tl[0], k), lerp(look[1], tl[1], k), lerp(look[2], tl[2], k)); cams.fov(c, lerp(40, 28, k)); }); } },
+          const p = P().pos, y = P().heading, dx = Math.sin(y), dz = Math.cos(y), rx = -dz, rz = dx;                                      // his forward and right (horizontal)
+          const tp = P().char.tools.torch.getWorldPosition(c.position.clone());                                                          // where the torch actually is
+          const wide = [p.x + dx * lerp(4.6, 3.6, t) + rx * lerp(2.6, 1.8, t), p.y + lerp(1.7, 1.5, t), p.z + dz * lerp(4.6, 3.6, t) + rz * lerp(2.6, 1.8, t)], wl = [p.x + dx * 0.9, p.y + lerp(0.8, 1.0, t), p.z + dz * 0.9];
+          const close = [tp.x + rx * 0.8 + dx * 1.15, tp.y + 0.3, tp.z + rz * 0.8 + dz * 1.15], cl = [tp.x - rx * 0.05, tp.y + 0.22, tp.z - rz * 0.05];
+          c.position.set(lerp(wide[0], close[0], k), lerp(wide[1], close[1], k), lerp(wide[2], close[2], k)); c.lookAt(lerp(wl[0], cl[0], k), lerp(wl[1], cl[1], k), lerp(wl[2], cl[2], k)); cams.fov(c, lerp(40, 30, k)); }); } },
 
     { name: 'G', frames: 95, setup() {          // the jaguar watches from the dark
         beginAt(19.9); const f = fireSpot(); this.f = f; if (!g.structures.fires.length) g.structures.placeCampfire(f.x, f.z, 9999);

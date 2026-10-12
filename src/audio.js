@@ -36,8 +36,12 @@ export class AudioEngine {
     const tl = ctx.createOscillator(); tl.frequency.value = 31; const tlg = ctx.createGain(); tlg.gain.value = 0.5; tl.connect(tlg).connect(trem.gain); tl.start();
     // fire bed
     this.fireG = ctx.createGain(); this.fireG.gain.value = 0;
-    const ff = ctx.createBiquadFilter(); ff.type = 'bandpass'; ff.frequency.value = 900; ff.Q.value = 0.4;
-    loopNoise().connect(ff).connect(this.fireG).connect(this.master);
+    const ff = ctx.createBiquadFilter(); ff.type = 'lowpass'; ff.frequency.value = 520; ff.Q.value = 0.5;                       // the roar of burning wood
+    const fh = ctx.createBiquadFilter(); fh.type = 'highpass'; fh.frequency.value = 90;
+    const flick = ctx.createGain(); flick.gain.value = 0.7; const fl = ctx.createOscillator(); fl.frequency.value = 0.7; const flg = ctx.createGain(); flg.gain.value = 0.3; fl.connect(flg).connect(flick.gain); fl.start();   // slow breathing of the flames
+    loopNoise().connect(ff).connect(fh).connect(flick).connect(this.fireG).connect(this.master);
+    const fz = ctx.createBiquadFilter(); fz.type = 'bandpass'; fz.frequency.value = 5200; fz.Q.value = 0.6; const fzg = ctx.createGain(); fzg.gain.value = 0.16;           // hiss of escaping steam and gas
+    loopNoise().connect(fz).connect(fzg).connect(this.fireG);
 
     this.ready = true;
   }
@@ -94,7 +98,7 @@ export class AudioEngine {
     }
     if ((this.nextOwl -= dt) <= 0) { if (night > 0.5) this.owl(0.05); this.nextOwl = rnd(18, 40); }
     if ((this.nextFrog -= dt) <= 0) { if (night > 0.3 && c.lake > 0.1) this.frog(0.07 * c.lake); this.nextFrog = rnd(1.2, 4); }
-    if (c.fire > 0.05 && (this.nextPop -= dt) <= 0) { this.noise(0.05, rnd(1500, 4500), 'highpass', 0.12 * c.fire, 0.7, rnd(-0.4, 0.4)); this.nextPop = rnd(0.05, 0.5); }
+    if (c.fire > 0.05 && (this.nextPop -= dt) <= 0) { this.crackle(c.fire); this.nextPop = Math.random() < 0.3 ? rnd(0.02, 0.07) : rnd(0.12, 0.7); }
     if (c.health < 32 && (this.nextBeat -= dt) <= 0) {
       const v = 0.18 * (1 - c.health / 40); this.tone(58, 0.13, 'sine', v, 40); this.tone(50, 0.16, 'sine', v * 0.8, 36, 0, 0.17);
       this.nextBeat = 0.45 + (c.health / 32) * 0.6;
@@ -116,7 +120,26 @@ export class AudioEngine {
   swim() { if (this.ready) this.noise(0.45, 900, 'bandpass', 0.1, 0.5, rnd(-0.2, 0.2), 0.08); }
   pickup() { if (!this.ready) return; this.tone(660, 0.09, 'sine', 0.07); this.tone(990, 0.12, 'sine', 0.06, null, 0, 0.07); }
   rustle() { if (this.ready) { this.noise(0.25, 3200, 'bandpass', 0.07, 0.8); this.noise(0.18, 2500, 'bandpass', 0.05, 0.8, 0, 0.01); } }
-  chop() { if (!this.ready) return; this.tone(150, 0.09, 'triangle', 0.18, 90); this.noise(0.08, 1800, 'bandpass', 0.14, 1); }
+  // one pop of a burning log: a tiny bright tick, sometimes a heavier snap with a woody body
+  crackle(k = 1) {
+    const big = Math.random() < 0.18, pan = rnd(-0.5, 0.5), g = (big ? 0.32 : 0.1 + Math.random() * 0.1) * k;
+    this.noise(big ? 0.035 : 0.014, rnd(2200, 7000), 'bandpass', g, 1.4, pan, 0.001);
+    if (big) { this.noise(0.09, rnd(500, 900), 'bandpass', g * 0.7, 2.5, pan, 0.002); this.tone(rnd(160, 260), 0.07, 'sine', g * 0.35, 90, pan); }
+  }
+  // axe biting into a trunk: the swing's whoosh builds up to the strike, which lands `delay` s later as a sharp tick, a hollow woody knock and a low thud
+  chop(delay = 0) {
+    if (!this.ready) return; const c = this.ctx, t = c.currentTime + delay, pan = rnd(-0.1, 0.1);
+    const n = (st, dur, f0, f1, type, peak, q, att) => { const s = c.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true; const f = c.createBiquadFilter(); f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, st); f.frequency.exponentialRampToValueAtTime(f1, st + dur);
+      const g = c.createGain(); g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(peak, st + att); g.gain.exponentialRampToValueAtTime(0.0001, st + dur); s.connect(f).connect(g).connect(this._pan(pan)); s.start(st, Math.random() * 2); s.stop(st + dur + 0.05); };
+    const r = (st, dur, f, peak, decay) => { const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f * 1.06, st); o.frequency.exponentialRampToValueAtTime(f, st + 0.03);
+      g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(peak, st + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, st + decay); o.connect(g).connect(this._pan(pan)); o.start(st); o.stop(st + dur + 0.05); };
+    n(t - 0.2, 0.2, 500, 1800, 'bandpass', 0.07, 0.8, 0.17);                      // swing: air rushing past the blade
+    n(t, 0.012, 3000, 3000, 'highpass', 0.5, 0.7, 0.001);                          // the edge biting in
+    n(t, 0.07, 1400, 500, 'bandpass', 0.3, 1.2, 0.002);                            // wood splintering
+    for (const [f, pk, d] of [[170, 0.34, 0.16], [305, 0.2, 0.11], [470, 0.12, 0.08]]) r(t, d + 0.05, f * (0.94 + Math.random() * 0.12), pk, d);   // the hollow trunk rings
+    this.tone(70, 0.14, 'sine', 0.32, 45, pan, delay);                              // low thud through the ground
+    if (Math.random() < 0.7) n(t + 0.05 + Math.random() * 0.08, 0.04, 2500, 1500, 'bandpass', 0.07, 2, 0.001);   // a chip skitters off
+  }
   eat() { if (!this.ready) return; for (let i = 0; i < 4; i++) setTimeout(() => this.noise(0.07, 1300, 'bandpass', 0.14, 1.2), i * 130); }
   drink() { if (!this.ready) return; for (let i = 0; i < 5; i++) this.tone(rnd(250, 420), 0.1, 'sine', 0.07, rnd(450, 620), 0, i * 0.14); }
   craft() { if (!this.ready) return; for (let i = 0; i < 3; i++) { setTimeout(() => { this.noise(0.08, 900, 'bandpass', 0.15, 1.4); this.tone(210, 0.07, 'triangle', 0.1, 120); }, i * 150); } }
