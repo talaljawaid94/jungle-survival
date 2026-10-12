@@ -8,7 +8,7 @@ fdir = argv[2] if len(argv) > 2 else "frames"; pat = argv[3] if len(argv) > 3 el
 files = sorted(glob.glob(V + fdir + "/" + pat))[:last]
 assert files, "no frames"
 bpy.ops.wm.read_factory_settings(use_empty=True)
-s = bpy.context.scene; s.render.fps = fps; s.render.resolution_x = 1920; s.render.resolution_y = 1080; s.render.resolution_percentage = 100
+s = bpy.context.scene; s.render.fps = fps; rx, ry = [int(v) for v in os.environ.get('RES', '1920x1080').split('x')]; s.render.resolution_x = rx; s.render.resolution_y = ry; s.render.resolution_percentage = 100
 s.frame_start = 1; s.frame_end = len(files)
 se = s.sequence_editor_create()
 coll = se.strips if hasattr(se, 'strips') else se.sequences
