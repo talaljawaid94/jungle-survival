@@ -19,8 +19,10 @@ export function initTouch(ctl, ui) {
   const util = document.createElement('div'); util.id = 'touchUtil';
   util.innerHTML = [['bag', 'Tab'], ['hammer', 'KeyC'], ['map', 'KeyM'], ['zzz', 'KeyZ'], ['drop_item', 'KeyQ'], ['hand', 'KeyF']]
     .map(([ic, code]) => `<button class="rbtn" data-k="${code}">${icon(ic, 20)}</button>`).join('');
+  const menuBtn = document.createElement('button'); menuBtn.className = 'rbtn'; menuBtn.innerHTML = icon('pause', 20); menuBtn.title = 'Menu'; util.appendChild(menuBtn);        // pause / settings / sound live behind one button
   hud.appendChild(util);
-  util.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); ctl.press(b.dataset.k); }));
+  util.querySelectorAll('button[data-k]').forEach((b) => b.addEventListener('pointerdown', (e) => { e.preventDefault(); ctl.press(b.dataset.k); }));
+  menuBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); if (ui.on.pause) ui.on.pause(); });
 
   const stickEl = document.createElement('div'); stickEl.id = 'stick'; stickEl.innerHTML = '<i class="ring"></i><i class="knob"></i>';
   hud.appendChild(stickEl); const knob = stickEl.querySelector('.knob');

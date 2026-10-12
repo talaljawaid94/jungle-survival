@@ -638,5 +638,5 @@ export function createCharacter() {
       if (st.lift > was + 0.004) { mot.lift = st.lift; model.sync(J, pelvis.position.y + st.lift, mot); }       // second pass so the lift lands on the same frame
     } else st.lift *= Math.exp(-dt * 8);
   }
-    return { motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J, tune: { TOOL_POSE, TOOL_ROLL, GRIP } };
+    return { setLift: (k) => { if (model && model.lift) model.lift(k); }, motion: model && model.motion, group: root, update: updateAll, setTool, attack, tools, parts: { head, torso: spine }, J, tune: { TOOL_POSE, TOOL_ROLL, GRIP } };
 }

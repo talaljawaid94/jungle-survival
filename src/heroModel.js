@@ -137,7 +137,12 @@ export function createModelRig(tools) {
       if (mw > 0.001) { const lift = (mot.lift || 0) - (mot.drop || 0); const mp = rest.pelvis.p0.clone().add(motion.hips).add(new THREE.Vector3(0, lift, 0).applyQuaternion(rest.pelvis.Pi)); pb.position.lerp(mp, mw); }
     }
   };
-  return { root, bones, sync, hold, motion };
+  // a soft self-lift so the survivor never sinks into black in shade, at dusk or on a small, dim phone screen: emissive follows the colour/texture,
+  // scaled by main.js with the time of day (none to speak of at night, when fire and moon light him)
+  const lifted = []; root.traverse((o) => { if (o.isMesh) for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m && m.isMeshStandardMaterial && !/hair|eyebrow|eyelash|eye|lash/i.test(m.name || '') && !lifted.includes(m)) lifted.push(m); });
+  for (const m of lifted) { m.emissive.copy(m.color); if (m.map) m.emissiveMap = m.map; m.emissiveIntensity = 0; m.needsUpdate = true; }
+  const lift = (k) => { for (const m of lifted) m.emissiveIntensity = k; };
+  return { root, bones, sync, hold, motion, lift };
 }
 
 function fixMaterial(m) {

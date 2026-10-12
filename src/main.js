@@ -278,6 +278,7 @@ function step(dt, t) {
   while (G.time >= 24) { G.time -= 24; G.day++; }
 
   if (ctl.touchTick) ctl.touchTick();
+  if (player.char.setLift) player.char.setLift(0.04 + 0.16 * sky.daylight);       // keep the survivor readable in shade and at dusk
   player.update(dt, ctl, world, stats, audio, locked);
   gameplay.update(dt, ctl, locked);
   const resting = !player.moving && (structures.firesNear(player.pos.x, player.pos.z, 6) || structures.nearestShelter(player.pos.x, player.pos.z, 4)) && stats.energy < 100;
